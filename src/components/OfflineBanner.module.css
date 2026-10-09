@@ -1,0 +1,16 @@
+/* Тонкая плашка над нижней панелью (на десктопе — у нижнего края). */
+.banner {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--nav-h) + env(safe-area-inset-bottom));
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--surface-pressed);
+  font-size: 13px;
+  font-weight: 600;
+}

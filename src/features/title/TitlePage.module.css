@@ -271,6 +271,11 @@
     color: var(--text-2);
   }
   .crumbs a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    min-width: 44px;
+    margin: -12px 0;
     text-decoration: underline;
     text-underline-offset: 3px;
   }

@@ -33,6 +33,8 @@ export const S = {
   rail: { prev: 'Назад', next: 'Вперёд' },
   home: {
     fresh: 'Новые серии',
+    continue: 'Продолжить просмотр',
+    favorites: 'Избранное',
     freshAll: 'Все новые серии',
     all: 'Все',
     latest: 'Последние тайтлы',
@@ -88,6 +90,8 @@ export const S = {
     emptyHint: 'Попробуйте оригинальное название или часть слова',
     prompt: 'Введите название',
   },
+  offline: 'Нет подключения к интернету',
+  boundary: { title: 'Что-то пошло не так', hint: 'Обновите страницу, если не поможет — зайдите позже', reload: 'Обновить' },
   footer: { left: 'anyview · MVP', right: 'Данные и видео: AnimeVost' },
   catalog: { title: 'Аниме', subtitle: (total: string, titles: string) => `Последние обновления · ${total} ${titles}` },
 } as const;

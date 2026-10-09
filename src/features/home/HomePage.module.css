@@ -15,6 +15,12 @@
 .railCard {
   width: 128px;
 }
+.continueCard {
+  width: 232px;
+}
+.continueGrid {
+  display: none;
+}
 .more {
   margin: 8px var(--gutter) 0;
   height: 48px;
@@ -78,6 +84,17 @@
   }
   .railCard {
     width: 176px;
+  }
+  .continueRail {
+    display: none;
+  }
+  .continueGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
   }
   .more {
     align-self: center;

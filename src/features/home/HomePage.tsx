@@ -4,6 +4,8 @@ import { useUpdates } from '../../api/hooks';
 import { Rail } from '../../components/Rail';
 import { SectionHeader } from '../../components/SectionHeader';
 import { TitleCard, TitleCardSkeleton } from '../../components/TitleCard';
+import { ContinueCard } from '../../components/ContinueCard';
+import { favoritesStore, historyStore, useStore } from '../../lib/storage';
 import { PosterGrid } from '../../components/PosterGrid';
 import { ErrorState } from '../../components/ErrorState';
 import { S } from '../../lib/strings';
@@ -16,6 +18,8 @@ const LATEST = 12;
 export function HomePage() {
   useDocumentTitle();
   const q = useUpdates();
+  const history = useStore(historyStore).slice(0, 10);
+  const favorites = useStore(favoritesStore);
   // Одна лента на главной и на /anime; для главной берём только первую страницу.
   const first = q.data?.pages[0]?.items;
   const fresh = (first ?? []).filter((t) => t.status === 'ongoing' && t.latestEpisode).slice(0, FRESH);
@@ -30,10 +34,33 @@ export function HomePage() {
         <SectionHeader title={S.home.fresh} to="/anime" label={S.home.freshAll} text={S.home.all} />
         <Rail>
           {first
-            ? fresh.map((t, i) => <TitleCard key={t.id} title={t} showEpisode priority={i < 2} className={styles.railCard} />)
+            ? fresh.map((t, i) => <TitleCard key={t.id} title={t} showEpisode priority={i < 1} className={styles.railCard} />)
             : Array.from({ length: 6 }, (_, i) => <TitleCardSkeleton key={i} className={styles.railCard} />)}
         </Rail>
       </section>
+
+      {history.length > 0 && (
+        <section className={styles.section}>
+          <SectionHeader title={S.home.continue} />
+          <div className={styles.continueRail}>
+            <Rail>
+              {history.map((h) => <ContinueCard key={h.title.id} entry={h} className={styles.continueCard} />)}
+            </Rail>
+          </div>
+          <ul className={styles.continueGrid}>
+            {history.map((h) => <li key={h.title.id}><ContinueCard entry={h} /></li>)}
+          </ul>
+        </section>
+      )}
+
+      {favorites.length > 0 && (
+        <section className={styles.section}>
+          <SectionHeader title={S.home.favorites} />
+          <Rail>
+            {favorites.map((t) => <TitleCard key={t.id} title={t} className={styles.railCard} />)}
+          </Rail>
+        </section>
+      )}
 
       <section className={styles.section}>
         <SectionHeader title={S.home.latest} to="/anime" label={S.home.latestAll} text={S.home.catalog} />

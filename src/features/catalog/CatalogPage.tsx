@@ -38,7 +38,7 @@ export function CatalogPage() {
           <p>{S.catalog.subtitle(formatNumber(total), titlesWord(total))}</p>
         )}
       </div>
-      <PosterGrid items={items ?? []} skeletons={!items ? 12 : isFetchingNextPage ? 6 : 0} priorityCount={3} />
+      <PosterGrid items={items ?? []} skeletons={!items ? 12 : isFetchingNextPage ? 6 : 0} priorityCount={1} />
       {isFetchingNextPage && <p role="status" className={styles.status}>{S.common.loadingMore}</p>}
       {isFetchNextPageError && (
         <div className={styles.status}>
