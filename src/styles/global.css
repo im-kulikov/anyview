@@ -28,6 +28,12 @@ input {
 button {
   cursor: pointer;
 }
+/* Страховка для любых будущих полей: iOS Safari зумит страницу при фокусе, если font-size < 16px. */
+input:not([type='range']):not([type='checkbox']):not([type='radio']),
+textarea,
+select {
+  font-size: max(16px, 1em);
+}
 img {
   display: block;
   max-width: 100%;
