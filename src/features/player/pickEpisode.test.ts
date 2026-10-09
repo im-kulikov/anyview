@@ -21,4 +21,11 @@ describe('pickEpisode', () => {
     expect(prevEpisode(eps, 'e1')).toBeUndefined();
     expect(prevEpisode(eps, 'e3')?.id).toBe('e2');
   });
+  test('нет доступных серий (анонс с синтетической серией) — undefined, без исключений', () => {
+    const announce = [ep(1, false)];
+    expect(pickEpisode(announce, null, {})).toBeUndefined();
+    expect(pickEpisode(announce, 'e1', { e1: pr(10, 1) })).toBeUndefined();
+    expect(pickEpisode([], null, {})).toBeUndefined();
+  });
+  test('nextEpisode с неизвестным id — undefined', () => expect(nextEpisode(eps, 'zzz')).toBeUndefined());
 });
