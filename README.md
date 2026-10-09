@@ -24,6 +24,20 @@ docs/ASSETS.md               логотип и иконки + промпты д�
 2. Желательно: выгрузить PNG экранов из холста (Share → Export) в `docs/design/screens/` — разметку макетов вне холста не запустить, картинки помогают сверять вёрстку. Что главнее при расхождениях — DESIGN.md §0.
 3. Логотип: промпты из `docs/ASSETS.md` для Codex, результат — в `public/brand/`.
 
+## Окружение облачной сессии
+
+Стандартный уровень сети **Trusted** пускает к npm и GitHub, но не к API animevost, обложкам и опубликованному сайту. В настройках окружения: **Network access → Custom**, отметить **Also include default list of common package managers** и добавить в **Allowed domains**:
+
+```
+api.animetop.info
+api.animevost.org
+video.animetop.info
+media.animetop.info
+static.openni.ru
+im-kulikov.github.io
+fonts.gstatic.com
+```
+
 ## Запуск Claude Code
 
 Откройте репозиторий в Claude Code (лучше в auto mode, чтобы ходы шли без подтверждений) и отправьте:

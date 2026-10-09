@@ -41,4 +41,6 @@ npm test            # vitest
 
 ## Деплой
 
-`.github/workflows/deploy.yml` (SPEC.md §10): push в `main` → проверки → сборка → копии `index.html` для прямых ссылок (`anime.html`, `series.html`, `movies.html`, `search.html`, `404.html`) → GitHub Pages. `base` берётся из `VITE_BASE` (по умолчанию `/anyview/`). Если Pages не включён (Settings → Pages → Source: GitHub Actions) и прав включить нет — написать владельцу, что нажать.
+`.github/workflows/deploy.yml` (SPEC.md §10): push в `main` → проверки → сборка → копии `index.html` для прямых ссылок (`anime.html`, `series.html`, `movies.html`, `search.html`, `404.html`) → GitHub Pages. `base` берётся из `VITE_BASE` (по умолчанию `/anyview/`). Если Pages не включён (Settings → Pages → Source: GitHub Actions), попробовать `gh api -X POST repos/im-kulikov/anyview/pages -f build_type=workflow`; нет прав — написать владельцу, что нажать.
+
+В облачной сессии GitHub идёт через прокси, который пропускает только часть GraphQL. Если `gh pr merge` отклонён, мержить через REST: `gh api -X PUT repos/im-kulikov/anyview/pulls/<N>/merge -f merge_method=squash`.
