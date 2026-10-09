@@ -1,0 +1,44 @@
+.nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+  background: var(--surface-1);
+  border-top: 1px solid var(--border);
+}
+.item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 0;
+  min-height: 44px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-3);
+}
+.pill {
+  width: 56px;
+  height: 30px;
+  border-radius: var(--radius-pill);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.active {
+  font-weight: 600;
+  color: var(--text);
+}
+.active .pill {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+@media (min-width: 1024px) {
+  .nav {
+    display: none;
+  }
+}

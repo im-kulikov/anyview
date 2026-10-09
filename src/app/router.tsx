@@ -1,6 +1,8 @@
 import { createBrowserRouter } from 'react-router';
 import { Layout } from './Layout';
 import { Stub } from './Stub';
+import { SoonPage } from '../features/soon/SoonPage';
+import { NotFoundPage } from '../features/notfound/NotFoundPage';
 
 export const router = createBrowserRouter(
   [
@@ -9,11 +11,11 @@ export const router = createBrowserRouter(
       children: [
         { path: '/', element: <Stub name="Главная" /> },
         { path: '/anime', element: <Stub name="Аниме" /> },
-        { path: '/series', element: <Stub name="Сериалы" /> },
-        { path: '/movies', element: <Stub name="Фильмы" /> },
+        { path: '/series', element: <SoonPage section="series" /> },
+        { path: '/movies', element: <SoonPage section="movies" /> },
         { path: '/title/:id', element: <Stub name="Тайтл" /> },
         { path: '/search', element: <Stub name="Поиск" /> },
-        { path: '*', element: <Stub name="Такой страницы нет" /> },
+        { path: '*', element: <NotFoundPage /> },
       ],
     },
   ],

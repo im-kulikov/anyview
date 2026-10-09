@@ -1,0 +1,23 @@
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  min-height: 44px;
+}
+.word {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.word span {
+  color: var(--accent);
+}
+@media (min-width: 1024px) {
+  .logo {
+    gap: 10px;
+  }
+  .word {
+    font-size: 22px;
+  }
+}
