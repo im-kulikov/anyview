@@ -8,6 +8,8 @@ interface ImportMetaEnv {
   /** База своего API (провайдер `anyview`). */
   readonly VITE_API_BASE?: string;
   readonly VITE_BASE?: string;
+  /** Абсолютный адрес сайта (для og:image); читает только сборка (config/htmlPlugin.ts). */
+  readonly VITE_SITE_URL?: string;
 }
 
 interface ImportMeta {

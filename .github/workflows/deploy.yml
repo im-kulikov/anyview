@@ -28,6 +28,8 @@ jobs:
       - run: npm run typecheck
       - run: npm test -- --run
       - run: npm run build
+      - name: Бюджет стартового JS
+        run: node scripts/check-budget.mjs
       - name: Прямые ссылки для SPA
         run: |
           cd dist
@@ -51,3 +53,8 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+      - name: Проверка после деплоя
+        run: |
+          for p in "" anime search manifest.webmanifest fonts/exo2-cyrillic.woff2; do
+            curl -fsS --retry 5 --retry-delay 5 -o /dev/null "${{ steps.deployment.outputs.page_url }}$p"
+          done

@@ -46,9 +46,11 @@ npm test -- --run src/lib/format.test.ts   # один файл
 |---|---|---|
 | `VITE_BASE` | `/anyview/` | работает (`vite.config.ts`) |
 | `VITE_ANIMEVOST_BASES` | `https://api.animetop.info/v1,https://api.animevost.org/v1` | работает (`src/api/index.ts`) |
-| `VITE_PROVIDER`, `VITE_API_BASE` | — | планируется (фаза 2, свой сервер); кодом **пока не читаются** |
+| `VITE_PROVIDER` | `animevost` | `animevost` или `anyview` (заготовка: все вызовы падают ошибкой «not implemented»); `src/api/index.ts` |
+| `VITE_API_BASE` | — | база своего API для `anyview`; пока только попадает в CSP и текст ошибки |
+| `VITE_SITE_URL` | `https://im-kulikov.github.io` + `VITE_BASE` | абсолютный адрес для `og:image` (`config/htmlPlugin.ts`) |
 
-Если поменять базы API, не забудьте `preload` ленты в `index.html`: он записан с жёстким хостом и `quantity=30` (SPEC.md §8).
+`preconnect`, `preload` первой страницы ленты и `connect-src` в CSP собираются при сборке из `VITE_ANIMEVOST_BASES` и `FEED_PAGE_SIZE` (`config/htmlPlugin.ts`), вручную в `index.html` ничего менять не нужно.
 
 ## Структура
 
