@@ -288,14 +288,32 @@ describe('provider.related', () => {
     expect(r.seasons.map((s) => [s.id, s.current])).toEqual([['av-2729', false], ['av-3138', true], ['av-4066', false]]);
   });
 
-  test('«ничего не найдено» (404 без CORS = TypeError) и сбои — пусто, без исключения', async () => {
-    const f = vi.fn((url: string) => (url.endsWith('/info') ? ok([raw(PUBLIC[1])]) : Promise.reject(new TypeError('Failed to fetch'))));
+  test('«ничего не найдено» (404 без CORS = TypeError) — пусто; сбой сети/сервера — ApiError, а не пустой ответ', async () => {
+    // контрольный запрос /last отвечает, а /search падает с TypeError — это «ничего не найдено» (API_CONTRACT §5.1)
+    const f = vi.fn((url: string) =>
+      url.endsWith('/info') || url.includes('/last') ? ok([raw(PUBLIC[1])]) : Promise.reject(new TypeError('Failed to fetch')),
+    );
     vi.stubGlobal('fetch', f);
     const p = createAnimevostProvider([BASE]);
-    await expect(p.related('av-2729')).resolves.toEqual({ seasons: [], similar: [] });
+    const none = await p.related('av-2729');
+    expect(none.similar).toEqual([]);
+    expect(none.seasons.length).toBeLessThan(2); // только сам тайтл: блок «Сезоны» не показывается
+    vi.stubGlobal('fetch', vi.fn((url: string) => (url.endsWith('/info') ? ok([raw(PUBLIC[1])]) : Promise.reject(new TypeError('offline')))));
+    await expect(createAnimevostProvider([BASE]).related('av-2729')).rejects.toMatchObject({ kind: 'network' });
     vi.stubGlobal('fetch', vi.fn(() => json({}, 500)));
-    await expect(createAnimevostProvider([BASE]).related('av-5')).resolves.toEqual({ seasons: [], similar: [] });
+    await expect(createAnimevostProvider([BASE]).related('av-5')).rejects.toMatchObject({ kind: 'http' });
     await expect(createAnimevostProvider([BASE]).related('xx-1')).resolves.toEqual({ seasons: [], similar: [] });
+  });
+
+  test('сбой поиска не кэшируется: следующий вызов пробует снова', async () => {
+    let fail = true;
+    const f = vi.fn((url: string) => (url.endsWith('/info') ? ok([raw(PUBLIC[1])]) : fail ? json({}, 500) : ok(PUBLIC.map(raw))));
+    vi.stubGlobal('fetch', f);
+    const p = createAnimevostProvider([BASE]);
+    await expect(p.related('av-2729')).rejects.toMatchObject({ kind: 'http' });
+    fail = false;
+    const r = await p.related('av-2729');
+    expect(r.seasons.length).toBeGreaterThanOrEqual(2);
   });
 
   test('отмена пробрасывается как AbortError, а не превращается в пустой ответ', async () => {

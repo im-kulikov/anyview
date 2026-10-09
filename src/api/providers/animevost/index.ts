@@ -286,7 +286,10 @@ export function createAnimevostProvider(bases: string[]): ContentProvider {
       return { items, page: 1, pageSize: items.length, total: items.length, hasMore: false };
     },
 
-    /** Никогда не бросает ошибку API: сбой поиска = «связей нет» (кроме отмены). Правила — related.ts, ADR-29. */
+    /**
+     * «Ничего не найдено» (404 без CORS, правило поиска §5.1) = пустой результат. Сетевой сбой бросается как ApiError,
+     * чтобы Query не закэшировал «связей нет» на час: интерфейс ошибку молча игнорирует. Правила — related.ts, ADR-29.
+     */
     async related(id, signal): Promise<RelatedTitles> {
       const none: RelatedTitles = { seasons: [], similar: [] };
       try {
@@ -296,8 +299,8 @@ export function createAnimevostProvider(bases: string[]): ContentProvider {
         const items = await memo(franchises, normTitle(q), async (sig) => (await self.search({ q, page: 1, pageSize: 50, signal: sig })).items, signal);
         return classifyRelated(cur, items);
       } catch (e) {
-        if (e instanceof DOMException && e.name === 'AbortError') throw e;
-        return none;
+        if (e instanceof ApiError && e.kind === 'not_found') return none;
+        throw e;
       }
     },
   };
