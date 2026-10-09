@@ -11,21 +11,23 @@ export function Rail({ children }: { children: ReactNode }) {
   const update = useCallback(() => {
     const el = ref.current;
     if (!el) return;
-    setEdge({ left: el.scrollLeft > 4, right: el.scrollLeft + el.clientWidth < el.scrollWidth - 4 });
+    const left = el.scrollLeft > 4;
+    const right = el.scrollLeft + el.clientWidth < el.scrollWidth - 4;
+    setEdge((e) => (e.left === left && e.right === right ? e : { left, right }));
   }, []);
 
+  useEffect(update, [update, children]);
   useEffect(() => {
-    update();
     const el = ref.current;
     if (!el) return;
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [update, children]);
+  }, [update]);
 
   const scroll = (dir: 1 | -1) => {
     const el = ref.current;
-    el?.scrollBy({ left: dir * el.clientWidth * 0.9, behavior: 'smooth' });
+    el?.scrollBy({ left: dir * el.clientWidth * 0.9, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   };
 
   return (
