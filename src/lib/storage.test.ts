@@ -6,7 +6,7 @@ vi.stubGlobal('localStorage', {
   setItem: (k: string, v: string) => void mem.set(k, v),
 });
 
-const { getPrefs, DEFAULT_PREFS, saveProgress,historyStore, progressStore, toggleFavorite, favoritesStore, addRecentSearch, recentStore, resetProgress } = await import('./storage');
+const { migrate, SCHEMA_VERSION, feedStore, getPrefs, DEFAULT_PREFS, saveProgress,historyStore, progressStore, toggleFavorite, favoritesStore, addRecentSearch, recentStore, resetProgress } = await import('./storage');
 
 const title = { id: 'av-1', type: 'anime', format: 'tv', name: 'T', status: 'ongoing' } as never;
 const ep = (n: number) => ({ id: `e${n}`, titleId: 'av-1', season: 1, number: n, name: `${n} серия`, available: true });
@@ -67,6 +67,27 @@ test('prefs: поля проверяются по одному, громкост
   expect(getPrefs()).toEqual(DEFAULT_PREFS);
 });
 
+test('квота: сначала выбрасывается кэш ленты, пользовательская запись сохраняется в localStorage', () => {
+  toggleFavorite(title);
+  mem.set('anyview:v1:feed', JSON.stringify({ savedAt: 1, items: [title], hasMore: true }));
+  const ls = localStorage as unknown as { setItem: (k: string, v: string) => void; removeItem?: (k: string) => void };
+  const { setItem } = ls;
+  ls.removeItem = (k) => void mem.delete(k);
+  ls.setItem = (k, v) => {
+    if (mem.has('anyview:v1:feed')) throw new DOMException('full', 'QuotaExceededError');
+    mem.set(k, v);
+  };
+  try {
+    toggleFavorite({ id: 'av-2', type: 'anime', format: 'tv', name: 'T', status: 'ongoing' } as never);
+    expect(mem.has('anyview:v1:feed')).toBe(false);
+    expect(JSON.parse(mem.get('anyview:v1:favorites')!)).toHaveLength(2);
+    expect(feedStore.get()).toBeNull();
+  } finally {
+    ls.setItem = setItem;
+    delete ls.removeItem;
+  }
+});
+
 test('setItem бросает (квота): запись не откатывается, живём в памяти (CODE-06)', () => {
   toggleFavorite(title);
   const ls = localStorage as unknown as { setItem: unknown };
@@ -80,4 +101,24 @@ test('setItem бросает (квота): запись не откатывае�
   } finally {
     ls.setItem = orig;
   }
+});
+
+test('migrate: нет версии = v1, цепочка шагов, упавший шаг не повышает версию, новая версия не понижается', () => {
+  const kv = new Map<string, string>();
+  const api = { getItem: (k: string) => kv.get(k) ?? null, setItem: (k: string, v: string) => void kv.set(k, v) };
+  const steps: number[] = [];
+  const migrations = { 1: () => void steps.push(1), 2: () => void steps.push(2) };
+  expect(migrate(api, migrations, 3)).toBe(3);
+  expect(steps).toEqual([1, 2]);
+  expect(kv.get('anyview:schema')).toBe('3');
+  expect(migrate(api, migrations, 3)).toBe(3);
+  expect(steps).toEqual([1, 2]); // повторно не выполняется
+  expect(migrate(api, migrations, 2)).toBe(3); // откат деплоя: версия не понижается
+  expect(kv.get('anyview:schema')).toBe('3');
+
+  const kv2 = new Map<string, string>([['anyview:schema', '1']]);
+  const api2 = { getItem: (k: string) => kv2.get(k) ?? null, setItem: (k: string, v: string) => void kv2.set(k, v) };
+  migrate(api2, { 1: () => { throw new Error('boom'); } }, 2);
+  expect(kv2.get('anyview:schema')).toBe('1');
+  expect(SCHEMA_VERSION).toBe(1);
 });

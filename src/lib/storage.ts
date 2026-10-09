@@ -3,6 +3,50 @@ import type { Episode, Title, TitleSummary } from '../api/contract';
 
 /** Локальные данные (SPEC §7): ключи с версией, чтение в try/catch, битое сбрасывается, лимиты по размеру. */
 
+/** Версия схемы всех ключей `anyview:v1:*` в целом. Менять вместе с записью в MIGRATIONS (ADR-17). */
+export const SCHEMA_VERSION = 1;
+const SCHEMA_KEY = 'anyview:schema';
+type Kv = Pick<Storage, 'getItem' | 'setItem'>;
+
+/** `MIGRATIONS[n]` переводит данные с версии n на n+1 (читает и пишет ключи напрямую). Формат v1 не менялся, поэтому пусто. */
+export const MIGRATIONS: Record<number, (kv: Kv) => void> = {};
+
+/**
+ * Приводит хранилище к текущей схеме. Нет записи о версии — это v1 (так записаны данные, появившиеся до версионирования).
+ * Миграция, упавшая с ошибкой, останавливает процесс без повышения версии: поэлементная валидация всё равно защищает чтение.
+ * Запись версии, более новой, чем знает код (откат деплоя), не понижается.
+ */
+export function migrate(kv: Kv, migrations = MIGRATIONS, target = SCHEMA_VERSION): number {
+  let v = Number(kv.getItem(SCHEMA_KEY)) || 1;
+  if (v > target) return v;
+  try {
+    for (; v < target; v++) migrations[v]?.(kv);
+    kv.setItem(SCHEMA_KEY, String(v));
+  } catch {
+    /* повторим при следующем запуске */
+  }
+  return v;
+}
+
+/** Кэши (не пользовательские данные), которые можно потерять ради записи важного. */
+const EVICTABLE = ['anyview:v1:feed'];
+
+/** Освободить место: выбрасываем кэши. Возвращает true, если было что выбросить. */
+function evictCaches(): boolean {
+  let any = false;
+  for (const k of EVICTABLE) {
+    try {
+      if (localStorage.getItem(k) !== null) {
+        localStorage.removeItem(k);
+        any = true;
+      }
+    } catch {
+      /* недоступен */
+    }
+  }
+  return any;
+}
+
 interface Store<T> {
   get(): T;
   set(v: T): void;
@@ -49,7 +93,13 @@ function createStore<T>(key: string, fallback: T, parse: (v: unknown) => T | und
     set(v) {
       const raw = JSON.stringify(v);
       try {
-        localStorage.setItem(fullKey, raw);
+        try {
+          localStorage.setItem(fullKey, raw);
+        } catch (e) {
+          // квота: пробуем освободить место за счёт кэшей и повторяем один раз
+          if (!evictCaches()) throw e;
+          localStorage.setItem(fullKey, raw);
+        }
         memory.degraded = false;
       } catch {
         memory.raw = raw;
@@ -63,6 +113,12 @@ function createStore<T>(key: string, fallback: T, parse: (v: unknown) => T | und
       return () => listeners.delete(cb);
     },
   };
+}
+
+try {
+  migrate(localStorage);
+} catch {
+  /* localStorage недоступен */
 }
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
