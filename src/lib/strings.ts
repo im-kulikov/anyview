@@ -55,6 +55,7 @@ export const S = {
     tags: 'Теги',
     breadcrumbs: 'Хлебные крошки',
     watch: 'Смотреть',
+    noEpisodes: 'Серий пока нет',
     watchEpisode: (n: number) => `Смотреть ${n} серию`,
     continueEpisode: (n: number) => `Продолжить ${n} серию`,
     favorite: 'В избранное',

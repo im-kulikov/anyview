@@ -6,6 +6,7 @@ type Progress = Record<string, ProgressEntry>;
 /** Следующая доступная серия после текущей (по порядку плейлиста). */
 export function nextEpisode(episodes: Episode[], currentId: string): Episode | undefined {
   const i = episodes.findIndex((e) => e.id === currentId);
+  if (i < 0) return undefined;
   return episodes.slice(i + 1).find((e) => e.available);
 }
 

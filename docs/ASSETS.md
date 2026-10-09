@@ -1,6 +1,6 @@
 # Графика и логотип
 
-Всё, что нужно нарисовать, и готовые промпты для Codex. Результат кладётся в `public/brand/`. До появления финальных файлов в коде используется временный логотип из макета (компонент `Logo`: квадрат акцентного цвета с белым треугольником + словесный знак).
+Всё, что нужно нарисовать, и готовые промпты для Codex. Результат кладётся в `public/brand/`. Финальные файлы лежат в `public/brand/`, но компонент `Logo` пока рисует inline-SVG (квадрат акцентного цвета с белым треугольником + словесный знак), а `logo-mark.svg` и `logo-horizontal.svg` в коде не используются. Отклонения от требований ниже (текст не в кривых, maskable ≈ 50 % вместо 80 %, относительный `og:image`) — в [STATUS.md](STATUS.md).
 
 ## Что нужно
 
@@ -47,5 +47,5 @@
 
 ## Подключение
 
-- `index.html`: `<link rel="icon" href="/brand/favicon.svg" type="image/svg+xml">`, `<link rel="icon" href="/brand/favicon-32.png" sizes="32x32">`, `<link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">`, `<meta name="theme-color" content="#131416">`, `og:image`. Пути — с учётом `base` (`%BASE_URL%` в Vite).
+- `index.html`: `<link rel="icon" href="%BASE_URL%brand/favicon.svg" type="image/svg+xml">`, `<link rel="icon" href="%BASE_URL%brand/favicon-32.png" sizes="32x32">`, `<link rel="apple-touch-icon" href="%BASE_URL%brand/apple-touch-icon.png">`, `<meta name="theme-color" content="#131416">`, `og:image`. Пути — с учётом `base` (`%BASE_URL%` в Vite).
 - `manifest.webmanifest`: `name: "anyview"`, `display: "standalone"`, `background_color` и `theme_color` `#131416`, иконки 192/512/maskable.

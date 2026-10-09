@@ -9,13 +9,16 @@ interface Store<T> {
   subscribe(cb: () => void): () => void;
 }
 
-function createStore<T>(key: string, fallback: T, valid: (v: unknown) => v is T): Store<T> {
+/** parse: недоверенный JSON → валидное значение (негодные элементы отбрасываются по одному) или undefined. */
+function createStore<T>(key: string, fallback: T, parse: (v: unknown) => T | undefined): Store<T> {
   const fullKey = `anyview:v1:${key}`;
   const listeners = new Set<() => void>();
   let cache: { raw: string | null; value: T } | undefined;
-  const memory: { raw: string | null } = { raw: null }; // localStorage недоступен — живём в памяти
+  // localStorage недоступен или переполнен — после первой ошибки записи живём в памяти.
+  const memory: { raw: string | null; degraded: boolean } = { raw: null, degraded: false };
 
   const readRaw = (): string | null => {
+    if (memory.degraded) return memory.raw;
     try {
       return localStorage.getItem(fullKey);
     } catch {
@@ -24,7 +27,8 @@ function createStore<T>(key: string, fallback: T, valid: (v: unknown) => v is T)
   };
   const notify = () => listeners.forEach((l) => l());
   if (typeof window !== 'undefined') {
-    window.addEventListener('storage', (e) => e.key === fullKey && notify());
+    // key === null — очистка хранилища в другой вкладке
+    window.addEventListener('storage', (e) => (e.key === null || e.key === fullKey) && notify());
   }
 
   return {
@@ -34,8 +38,7 @@ function createStore<T>(key: string, fallback: T, valid: (v: unknown) => v is T)
       let value = fallback;
       if (raw) {
         try {
-          const parsed: unknown = JSON.parse(raw);
-          if (valid(parsed)) value = parsed;
+          value = parse(JSON.parse(raw)) ?? fallback;
         } catch {
           /* битые данные сбрасываются */
         }
@@ -47,8 +50,10 @@ function createStore<T>(key: string, fallback: T, valid: (v: unknown) => v is T)
       const raw = JSON.stringify(v);
       try {
         localStorage.setItem(fullKey, raw);
+        memory.degraded = false;
       } catch {
         memory.raw = raw;
+        memory.degraded = true;
       }
       cache = { raw, value: v };
       notify();
@@ -61,7 +66,34 @@ function createStore<T>(key: string, fallback: T, valid: (v: unknown) => v is T)
 }
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
-const isArr = (v: unknown): v is unknown[] => Array.isArray(v);
+const isStr = (v: unknown): v is string => typeof v === 'string';
+const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+
+const listOf = <T>(ok: (x: unknown) => x is T) => (v: unknown): T[] | undefined => (Array.isArray(v) ? v.filter(ok) : undefined);
+
+const isSummary = (x: unknown): x is TitleSummary =>
+  isObj(x) && isStr(x.id) && isStr(x.name) && isStr(x.type) && isStr(x.format) && isStr(x.status);
+const isHistory = (x: unknown): x is HistoryEntry =>
+  isObj(x) && isSummary(x.title) && isStr(x.episodeId) && isStr(x.episodeName) && isNum(x.position) && isNum(x.duration) && isNum(x.updatedAt);
+const isProgress = (x: unknown): x is ProgressEntry =>
+  isObj(x) && isStr(x.titleId) && isNum(x.position) && isNum(x.duration) && isNum(x.updatedAt);
+
+const parseProgress = (v: unknown): Record<string, ProgressEntry> | undefined =>
+  isObj(v) ? Object.fromEntries(Object.entries(v).filter(([, e]) => isProgress(e))) as Record<string, ProgressEntry> : undefined;
+
+const QUALITIES = ['auto', 'sd', 'hd'];
+export const clampVolume = (v: number) => Math.min(1, Math.max(0, v));
+/** Поля проверяются по одному: битое поле заменяется значением по умолчанию. */
+const parsePrefs = (v: unknown): Prefs | undefined => {
+  if (!isObj(v)) return undefined;
+  const d = DEFAULT_PREFS;
+  return {
+    quality: QUALITIES.includes(v.quality as string) ? (v.quality as Prefs['quality']) : d.quality,
+    autoNext: typeof v.autoNext === 'boolean' ? v.autoNext : d.autoNext,
+    volume: isNum(v.volume) ? clampVolume(v.volume) : d.volume,
+    muted: typeof v.muted === 'boolean' ? v.muted : d.muted,
+  };
+};
 
 export interface ProgressEntry { titleId: string; position: number; duration: number; updatedAt: number }
 export interface HistoryEntry {
@@ -78,11 +110,11 @@ export interface Prefs { quality: 'auto' | 'sd' | 'hd'; autoNext: boolean; volum
 export const DEFAULT_PREFS: Prefs = { quality: 'auto', autoNext: true, volume: 1, muted: false };
 export const LIMITS = { progress: 500, history: 50, favorites: 200, recent: 8 };
 
-export const progressStore = createStore<Record<string, ProgressEntry>>('progress', {}, isObj as (v: unknown) => v is Record<string, ProgressEntry>);
-export const historyStore = createStore<HistoryEntry[]>('history', [], isArr as (v: unknown) => v is HistoryEntry[]);
-export const favoritesStore = createStore<TitleSummary[]>('favorites', [], isArr as (v: unknown) => v is TitleSummary[]);
-export const recentStore = createStore<string[]>('recentSearches', [], (v): v is string[] => isArr(v) && v.every((x) => typeof x === 'string'));
-export const prefsStore = createStore<Prefs>('prefs', DEFAULT_PREFS, (v): v is Prefs => isObj(v));
+export const progressStore = createStore<Record<string, ProgressEntry>>('progress', {}, parseProgress);
+export const historyStore = createStore<HistoryEntry[]>('history', [], listOf(isHistory));
+export const favoritesStore = createStore<TitleSummary[]>('favorites', [], listOf(isSummary));
+export const recentStore = createStore<string[]>('recentSearches', [], listOf(isStr));
+export const prefsStore = createStore<Prefs>('prefs', DEFAULT_PREFS, parsePrefs);
 
 export function useStore<T>(store: Store<T>): T {
   return useSyncExternalStore(store.subscribe, store.get, () => store.get());

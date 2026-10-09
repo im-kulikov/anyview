@@ -383,3 +383,10 @@
     padding-right: 4px;
   }
 }
+
+.empty {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 24px 0;
+  color: var(--text-2);
+}
