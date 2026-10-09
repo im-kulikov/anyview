@@ -1,0 +1,22 @@
+.pill {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--scrim);
+  font-size: 11px;
+  font-weight: 600;
+}
+@media (min-width: 1024px) {
+  .pill {
+    right: 10px;
+    bottom: 10px;
+    gap: 4px;
+    padding: 4px 9px;
+    font-size: 13px;
+  }
+}

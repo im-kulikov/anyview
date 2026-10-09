@@ -10,10 +10,18 @@
     <link rel="preconnect" href="https://static.openni.ru" crossorigin />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Первая страница ленты качается параллельно с JS (SPEC §8); ключ запроса совпадает с main.tsx. -->
+    <link rel="preload" as="fetch" crossorigin href="https://api.animetop.info/v1/last?page=1&quantity=30" />
+    <!-- Шрифт не блокирует первый рендер: стили подключаются после загрузки (display=swap). -->
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700;800&display=swap&subset=cyrillic"
+      media="print"
+      onload="this.media='all'"
     />
+    <noscript>
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700;800&display=swap&subset=cyrillic" />
+    </noscript>
   </head>
   <body>
     <div id="root"></div>
