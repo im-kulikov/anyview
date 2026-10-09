@@ -2,7 +2,7 @@ import type { HtmlTagDescriptor, Plugin } from 'vite';
 import { FEED_PAGE_SIZE } from '../src/api/keys';
 import { IMAGE_ORIGIN, lastPath, parseBases } from '../src/api/providers/animevost/urls';
 
-export interface Env { VITE_PROVIDER?: string; VITE_ANIMEVOST_BASES?: string; VITE_API_BASE?: string; VITE_SITE_URL?: string }
+export interface Env { VITE_PROVIDER?: string; VITE_ANIMEVOST_BASES?: string; VITE_API_BASE?: string; VITE_SITE_URL?: string; VITE_FIREBASE_API_KEY?: string; VITE_FIREBASE_PROJECT_ID?: string; VITE_GOOGLE_CLIENT_ID?: string }
 
 /** Подсказки загрузки из той же конфигурации, что читает приложение (SPEC §8): preconnect к API и картинкам + preload первой страницы ленты. */
 export function headHints(env: Env): HtmlTagDescriptor[] {
@@ -22,14 +22,18 @@ export function headHints(env: Env): HtmlTagDescriptor[] {
 export function csp(env: Env): string {
   const bases = (env.VITE_PROVIDER || 'animevost') === 'anyview' ? [env.VITE_API_BASE ?? ''] : parseBases(env.VITE_ANIMEVOST_BASES);
   const connect = [...new Set(bases.filter(Boolean).map((b) => new URL(b).origin))];
+  // Синхронизация (ADR-28): источники добавляются, только если в сборке задан Firebase; каждый — минимально необходимый.
+  const sync = !!(env.VITE_FIREBASE_API_KEY && env.VITE_FIREBASE_PROJECT_ID && env.VITE_GOOGLE_CLIENT_ID);
+  const gsi = 'https://accounts.google.com/gsi/';
   return [
     "default-src 'none'",
-    "script-src 'self'",
-    "style-src 'self' 'unsafe-inline'",
+    `script-src 'self'${sync ? ` ${gsi}client` : ''}`, // скрипт Google Identity Services
+    `style-src 'self' 'unsafe-inline'${sync ? ` ${gsi}style` : ''}`, // стиль кнопки GIS
+    ...(sync ? [`frame-src ${gsi}`] : []), // iframe кнопки входа
+    `connect-src 'self' ${[...connect, ...(sync ? [gsi, 'https://identitytoolkit.googleapis.com', 'https://securetoken.googleapis.com', 'https://firestore.googleapis.com'] : [])].join(' ')}`.trim(), // GIS; Firebase Auth (вход, обновление токена); Firestore REST
     "img-src 'self' https: data:",
     "media-src https: blob:",
     "font-src 'self'",
-    `connect-src 'self' ${connect.join(' ')}`.trim(),
     "manifest-src 'self'",
     "base-uri 'self'",
     "form-action 'none'",

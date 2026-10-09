@@ -1,0 +1,18 @@
+// Правила Firestore для anyview (docs/SYNC.md). Публикуются вручную: консоль Firebase → Firestore → Rules.
+// Один документ на пользователя: users/{uid} = { schema: int, updatedAt: timestamp, data: string }.
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      // create/update: документ строго такой формы.
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['schema', 'updatedAt', 'data'])
+        && request.resource.data.schema is int
+        && request.resource.data.data is string
+        && request.resource.data.data.size() < 200000;
+      // delete вынесено отдельно: при удалении request.resource равен null, и выражение выше даёт ошибку, то есть отказ.
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}
