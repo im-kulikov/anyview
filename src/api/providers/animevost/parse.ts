@@ -1,5 +1,6 @@
 import type { Episode, Image, Rating, Tag, TitleFormat, TitleStatus, EpisodeCounter } from '../../contract';
 import { https } from '../../../lib/https';
+import { IMAGE_ORIGIN } from './urls';
 
 export interface RawItem {
   id: number | string;
@@ -150,18 +151,18 @@ export function genresOf(genre?: string): Tag[] {
     .map((g) => ({ id: g.toLowerCase(), name: g[0].toUpperCase() + g.slice(1) }));
 }
 
-export function posterOf(raw: RawItem): Image | undefined {
-  return raw.urlImagePreview ? { url: https(raw.urlImagePreview) } : undefined;
-}
+/** Картинка animevost → абсолютный https (относительные пути — от хоста постеров); негодный адрес — без картинки. */
+const imageOf = (url: string | null | undefined, base: string = IMAGE_ORIGIN): Image | undefined => {
+  const abs = url ? https(url, base) : undefined;
+  return abs ? { url: abs } : undefined;
+};
+
+export const posterOf = (raw: RawItem): Image | undefined => imageOf(raw.urlImagePreview);
 
 export function backdropOf(raw: RawItem): Image | undefined {
   const path = (raw.screenImage ?? []).find((s) => typeof s === 'string' && s.trim());
   if (!path) return undefined;
-  try {
-    return { url: https(new URL(path, raw.urlImagePreview ?? undefined).href) };
-  } catch {
-    return undefined;
-  }
+  return imageOf(path, posterOf(raw)?.url);
 }
 
 const firstNumber = (s: string) => {
@@ -200,7 +201,7 @@ export function episodeOf(rawId: string, titleId: string, p: RawPlaylistItem, in
     season: 1,
     ...(number !== undefined && { number }),
     name: p.name,
-    ...(p.preview && { preview: { url: https(p.preview) } }),
+    ...(imageOf(p.preview) && { preview: imageOf(p.preview) }),
     available: true,
   };
 }

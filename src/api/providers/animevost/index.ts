@@ -43,6 +43,8 @@ class TtlCache<V> {
   }
 }
 
+interface Shared<T> { ctrl: AbortController; subs: number; done: boolean; p: Promise<T> }
+
 /** Элемент ленты пригоден для маппинга: иначе пропускаем его, а не роняем страницу. */
 const usable = (r: unknown): r is RawItem =>
   typeof r === 'object' && r !== null && typeof (r as RawItem).title === 'string' && (r as RawItem).id != null;
@@ -100,39 +102,64 @@ export function toTitle(raw: RawItem, now = new Date()): Title {
 export function createAnimevostProvider(bases: string[]): ContentProvider {
   const client = createClient(bases);
   const rawCache = new TtlCache<RawItem>();
-  const rawLoads = new TtlCache<Promise<RawItem>>();
-  const playlists = new TtlCache<Promise<RawPlaylistItem[]>>();
+  const rawLoads = new TtlCache<Shared<RawItem>>();
+  const playlists = new TtlCache<Shared<RawPlaylistItem[]>>();
 
   const remember = (items: RawItem[]) => items.forEach((r) => rawCache.set(String(r.id), r));
 
-  const memo = <T>(cache: TtlCache<Promise<T>>, key: string, load: () => Promise<T>) => {
-    let p = cache.get(key);
-    if (!p) {
-      p = load();
-      cache.set(key, p);
-      p.catch(() => cache.delete(key));
+  /**
+   * Один запрос на ключ для всех вызывающих. У запроса свой AbortController: он срабатывает, только когда
+   * отменили ВСЕ подписчики (иначе уход одной страницы оборвал бы запрос другой); оборванный запрос из кэша удаляется.
+   */
+  const memo = <T>(cache: TtlCache<Shared<T>>, key: string, load: (signal: AbortSignal) => Promise<T>, signal?: AbortSignal): Promise<T> => {
+    let e = cache.get(key);
+    if (!e) {
+      const ctrl = new AbortController();
+      const created: Shared<T> = { ctrl, subs: 0, done: false, p: load(ctrl.signal) };
+      e = created;
+      cache.set(key, created);
+      created.p.then(
+        () => void (created.done = true),
+        () => {
+          created.done = true;
+          if (cache.get(key) === created) cache.delete(key);
+        },
+      );
     }
-    return p;
+    const shared = e;
+    shared.subs++;
+    return new Promise<T>((resolve, reject) => {
+      const onAbort = () => {
+        reject(signal?.reason ?? new DOMException('Aborted', 'AbortError'));
+        if (--shared.subs === 0 && !shared.done) {
+          shared.ctrl.abort();
+          if (cache.get(key) === shared) cache.delete(key);
+        }
+      };
+      if (signal?.aborted) return onAbort();
+      signal?.addEventListener('abort', onAbort, { once: true });
+      shared.p.then(resolve, reject).finally(() => signal?.removeEventListener('abort', onAbort));
+    });
   };
 
-  const loadRaw = (rawId: string): Promise<RawItem> => {
+  const loadRaw = (rawId: string, signal?: AbortSignal): Promise<RawItem> => {
     const hit = rawCache.get(rawId);
     if (hit) return Promise.resolve(hit);
-    return memo(rawLoads, rawId, async () => {
-      const res = await client.request<ListResponse>('/info', form({ id: rawId }));
+    return memo(rawLoads, rawId, async (sig) => {
+      const res = await client.request<ListResponse>('/info', { ...form({ id: rawId }), signal: sig });
       const item = res.state?.status === 'ok' ? res.data?.[0] : undefined;
       if (!usable(item)) throw new ApiError('not_found', 'Тайтл не найден');
       remember([item]);
       return item;
-    });
+    }, signal);
   };
 
-  const loadPlaylist = (rawId: string) =>
-    memo(playlists, rawId, async () => {
-      const res = await client.request<unknown>('/playlist', form({ id: rawId }));
+  const loadPlaylist = (rawId: string, signal?: AbortSignal) =>
+    memo(playlists, rawId, async (sig) => {
+      const res = await client.request<unknown>('/playlist', { ...form({ id: rawId }), signal: sig });
       if (!Array.isArray(res)) throw new ApiError('not_found', 'Тайтл не найден');
       return sortPlaylist(res.filter((p): p is RawPlaylistItem => typeof p?.name === 'string'));
-    });
+    }, signal);
 
   return {
     async catalog(): Promise<CatalogInfo> {
@@ -149,6 +176,8 @@ export function createAnimevostProvider(bases: string[]): ContentProvider {
       const size = Math.min(pageSize, MAX_PAGE);
       const res = await client.request<ListResponse>(lastPath(page, size), { signal });
       if (res.state?.status !== 'ok' || !Array.isArray(res.data)) {
+        // fail за концом списка — штатный конец; на первой странице это сбой API (повторяется как сетевой)
+        if (page === 1) throw new ApiError('network', 'Лента временно недоступна');
         return { items: [], page, pageSize: size, hasMore: false };
       }
       const data = res.data.filter(usable);
@@ -169,13 +198,12 @@ export function createAnimevostProvider(bases: string[]): ContentProvider {
       const rawId = rawIdOf(id);
       const hit = rawCache.get(rawId);
       if (hit) return toTitle(hit);
-      signal?.throwIfAborted();
-      return toTitle(await loadRaw(rawId));
+      return toTitle(await loadRaw(rawId, signal));
     },
 
     async episodes(titleId, signal): Promise<Season[]> {
       const rawId = rawIdOf(titleId);
-      const [list, raw] = await Promise.all([loadPlaylist(rawId), loadRaw(rawId).catch(() => undefined)]);
+      const [list, raw] = await Promise.all([loadPlaylist(rawId, signal), loadRaw(rawId, signal).catch(() => undefined)]);
       signal?.throwIfAborted();
       const episodes: Episode[] = episodesOf(rawId, titleId, list);
       const next = raw && parseTitle(raw.title).nextEpisode;
@@ -197,11 +225,13 @@ export function createAnimevostProvider(bases: string[]): ContentProvider {
       const m = /^av-(\d+)-(.+)$/.exec(episodeId);
       if (!m) throw new ApiError('not_found', 'Серия не найдена');
       if (m[2].startsWith('next-')) return [];
-      const list = await loadPlaylist(m[1]);
+      const list = await loadPlaylist(m[1], signal);
       signal?.throwIfAborted();
       const item = list[episodesOf(m[1], '', list).findIndex((e) => e.id === episodeId)];
       if (!item) throw new ApiError('not_found', 'Серия не найдена');
-      const make = (url: string, label: string, height: number): Source => ({
+      const make = (raw: string, label: string, height: number): Source[] => {
+        const url = https(raw);
+        return url ? [{
         id: `${episodeId}-${height}`,
         episodeId,
         provider: 'animevost',
@@ -209,11 +239,12 @@ export function createAnimevostProvider(bases: string[]): ContentProvider {
         quality: { label, height },
         audio: [{ lang: 'ru', kind: 'dub', studio: 'AnimeVost' }],
         subtitles: [],
-        stream: { kind: 'file', url: https(url), mime: 'video/mp4' },
-      });
+        stream: { kind: 'file', url, mime: 'video/mp4' },
+      }] : [];
+      };
       return [
-        ...(item.std ? [make(item.std, 'SD', 480)] : []),
-        ...(item.hd ? [make(item.hd, 'HD', 720)] : []),
+        ...(item.std ? make(item.std, 'SD', 480) : []),
+        ...(item.hd ? make(item.hd, 'HD', 720) : []),
       ];
     },
 
@@ -224,9 +255,16 @@ export function createAnimevostProvider(bases: string[]): ContentProvider {
         res = await client.requestOnce('/search', { ...form({ name: q }), signal });
       } catch (e) {
         if (e instanceof DOMException && e.name === 'AbortError') throw e;
-        // shortcut: 404 «ничего не найдено» приходит без CORS и неотличим от обрыва сети;
-        // заменить прокси с CORS на всех ответах или своим сервером (RESEARCH.md §1.4).
-        if (e instanceof TypeError && globalThis.navigator?.onLine !== false && client.baseWorked()) return empty;
+        // shortcut: 404 «ничего не найдено» приходит без CORS и неотличим от обрыва сети. Различаем контрольным
+        // запросом (лента, 1 элемент, CORS открыт): отвечает — значит поиск ничего не нашёл. Заменить прокси с CORS
+        // на всех ответах или своим сервером (RESEARCH.md §1.4).
+        if (!(e instanceof TypeError) || globalThis.navigator?.onLine === false) throw new ApiError('network', 'Нет соединения');
+        try {
+          const probe = await client.requestOnce(lastPath(1, 1), { signal });
+          if (probe.ok) return empty;
+        } catch (e2) {
+          if (e2 instanceof DOMException && e2.name === 'AbortError') throw e2;
+        }
         throw new ApiError('network', 'Нет соединения');
       }
       if (res.status === 404) return empty;

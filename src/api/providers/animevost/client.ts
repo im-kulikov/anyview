@@ -5,8 +5,6 @@ export interface Client {
   request<T>(path: string, init?: RequestInit): Promise<T>;
   /** Один запрос к текущей базе, без перебора; сеть → TypeError наружу. */
   requestOnce(path: string, init?: RequestInit): Promise<Response>;
-  /** Отвечала ли текущая база успешно в этой сессии. */
-  baseWorked(): boolean;
 }
 
 const isAbort = (e: unknown) => e instanceof DOMException && e.name === 'AbortError';
@@ -21,7 +19,6 @@ const withTimeout = (init: RequestInit | undefined, ms: number): RequestInit => 
 
 export function createClient(bases: string[], timeoutMs = REQUEST_TIMEOUT_MS): Client {
   let current = 0;
-  const worked = new Set<string>();
 
   async function parse<T>(res: Response): Promise<T> {
     if (!res.ok) throw new ApiError('http', `HTTP ${res.status}`, res.status);
@@ -33,12 +30,9 @@ export function createClient(bases: string[], timeoutMs = REQUEST_TIMEOUT_MS): C
   }
 
   return {
-    baseWorked: () => worked.has(bases[current]),
     async requestOnce(path, init) {
       const base = bases[current];
-      const res = await fetch(base + path, withTimeout(init, timeoutMs));
-      if (res.ok) worked.add(base);
-      return res;
+      return fetch(base + path, withTimeout(init, timeoutMs));
     },
     async request<T>(path: string, init?: RequestInit) {
       let last: unknown;
@@ -48,7 +42,6 @@ export function createClient(bases: string[], timeoutMs = REQUEST_TIMEOUT_MS): C
           const res = await fetch(bases[idx] + path, withTimeout(init, timeoutMs));
           const data = await parse<T>(res);
           current = idx;
-          worked.add(bases[idx]);
           return data;
         } catch (e) {
           if (isAbort(e)) throw e;
