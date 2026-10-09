@@ -25,11 +25,16 @@ export function EpisodeList({ title, episodes, currentId, onPick, compact }: {
   const progress = useStore(progressStore);
   const listRef = useRef<HTMLOListElement>(null);
 
-  // Текущая серия видна в списке со своей прокруткой; страницу при этом не двигаем.
+  // Текущая серия видна в ближайшем контейнере со своей прокруткой (колонка, панель плеера, мобильный список); страницу не двигаем.
   useEffect(() => {
-    const list = listRef.current;
-    const el = list?.querySelector<HTMLElement>('[aria-current="true"]');
-    if (list && el && list.scrollHeight > list.clientHeight) list.scrollTop = Math.max(0, el.offsetTop - list.offsetTop - 8);
+    const el = listRef.current?.querySelector<HTMLElement>('[aria-current="true"]');
+    for (let box = el?.parentElement ?? null; el && box; box = box.parentElement) {
+      const oy = getComputedStyle(box).overflowY;
+      if ((oy === 'auto' || oy === 'scroll') && box.scrollHeight > box.clientHeight) {
+        box.scrollTop += el.getBoundingClientRect().top - box.getBoundingClientRect().top - 8;
+        break;
+      }
+    }
   }, [currentId]);
 
   return (
