@@ -18,6 +18,12 @@ restoreFeed(queryClient);
 persistFeed(queryClient);
 watchFeedFreshness(queryClient);
 void queryClient.prefetchInfiniteQuery(updatesQuery());
+// Синхронизация (ADR-28): только если пользователь уже входил на этом устройстве; код грузится отдельным чанком после первой отрисовки.
+try {
+  if (localStorage.getItem('anyview:sync') === '1') setTimeout(() => void import('./sync/engine').then((e) => e.start()), 2000);
+} catch {
+  /* localStorage недоступен */
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

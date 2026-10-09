@@ -23,3 +23,17 @@ test('CSP: connect-src только из баз, скрипты только с�
   expect(c).toContain("script-src 'self';");
   expect(csp({ VITE_PROVIDER: 'anyview', VITE_API_BASE: 'https://api.me/x' })).toContain("connect-src 'self' https://api.me;");
 });
+
+test('CSP: источники Google и Firebase — только при заданной конфигурации синхронизации (ADR-28)', () => {
+  const base = { VITE_ANIMEVOST_BASES: 'https://a.test/v1' };
+  const off = csp(base);
+  expect(off).not.toContain('google');
+  expect(off).not.toContain('frame-src');
+  const on = csp({ ...base, VITE_FIREBASE_API_KEY: 'k', VITE_FIREBASE_PROJECT_ID: 'p', VITE_GOOGLE_CLIENT_ID: 'c' });
+  expect(on).toContain("script-src 'self' https://accounts.google.com/gsi/client;");
+  expect(on).toContain("style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style;");
+  expect(on).toContain('frame-src https://accounts.google.com/gsi/;');
+  expect(on).toMatch(/connect-src 'self' https:\/\/a\.test .*identitytoolkit\.googleapis\.com .*securetoken\.googleapis\.com .*firestore\.googleapis\.com;/);
+  expect(on).toContain("default-src 'none'");
+  expect(on).not.toContain("'unsafe-eval'");
+});
