@@ -28,4 +28,7 @@ describe('pickEpisode', () => {
     expect(pickEpisode([], null, {})).toBeUndefined();
   });
   test('nextEpisode с неизвестным id — undefined', () => expect(nextEpisode(eps, 'zzz')).toBeUndefined());
+  test('позиция не выше порога RESUME_MIN — серия не «начата»', () => expect(pickEpisode(eps, null, { e2: pr(3, 5) })?.id).toBe('e1'));
+  test('«последняя просмотренная» — по порядку в списке, а не по времени (CODE-22)', () =>
+    expect(pickEpisode(eps, null, { e1: pr(95, 99), e2: pr(95, 1) })?.id).toBe('e3'));
 });

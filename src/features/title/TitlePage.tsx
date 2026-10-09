@@ -10,10 +10,11 @@ import { NotFoundPage } from '../notfound/NotFoundPage';
 import { Player, type PlayerHandle } from '../player/Player';
 import { EpisodeList } from '../player/EpisodeList';
 import { pickEpisode } from '../player/pickEpisode';
+import { isResumable } from '../player/playerModel';
 import { ExpandableText } from './ExpandableText';
 import { S } from '../../lib/strings';
 import { episodesText, formatLong, statusLabel, votesWord, formatNumber } from '../../lib/format';
-import { favoritesStore, isFavorite, isWatched, progressStore, toggleFavorite, useStore } from '../../lib/storage';
+import { favoritesStore, isFavorite, progressStore, toggleFavorite, useStore } from '../../lib/storage';
 import { useDocumentTitle } from '../../lib/useDocumentTitle';
 import styles from './TitlePage.module.css';
 
@@ -57,7 +58,7 @@ function TitleBody({ title, episodes, episodesPending }: { title: Title; episode
 
   const fav = isFavorite(favorites, title.id);
   const p = current ? progress[current.id] : undefined;
-  const resuming = !!p && p.position > 5 && !isWatched(p);
+  const resuming = isResumable(p);
   const cta = !current ? S.title.watch : current.number === undefined ? S.title.watch : resuming ? S.title.continueEpisode(current.number) : S.title.watchEpisode(current.number);
 
   const meta = [formatLong(title.format), title.year, statusLabel(title.status)].filter(Boolean).join(' · ');
