@@ -16,4 +16,11 @@ export default tseslint.config(
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
     },
   },
+  {
+    // Слои (ARCH-21): код провайдеров — только внутри src/api; интерфейс знает контракт и ContentProvider.
+    files: ['src/{app,components,features,lib,styles}/**/*.{ts,tsx}', 'src/main.tsx'],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: [{ group: ['**/api/providers/**'], message: 'Провайдеры — только в src/api (CLAUDE.md).' }] }],
+    },
+  },
 );
