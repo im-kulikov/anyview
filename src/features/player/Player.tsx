@@ -236,6 +236,7 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player({ title, e
     bump();
   });
 
+  const closePanel = useCallback(() => setPanel(false), []);
   const pauseVideo = useCallback(() => videoRef.current?.pause(), []);
   useMediaSession({ title, episode: current, hasNext: !!next, onPlay: startPlay, onPause: pauseVideo, onNext: goNext, onPrev: goPrev });
 
@@ -369,7 +370,7 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player({ title, e
           onFullscreen={toggleFullscreen}
         />
 
-        {panel && <EpisodePanel title={title} episodes={episodes} currentId={current.id} onPick={playEpisode} onClose={() => setPanel(false)} />}
+        {panel && <EpisodePanel title={title} episodes={episodes} currentId={current.id} onPick={playEpisode} onClose={closePanel} />}
       </div>
 
       <div className={styles.under}>

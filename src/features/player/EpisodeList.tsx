@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { memo, useEffect, useRef } from 'react';
 import { AudioLines, Check, Clock } from 'lucide-react';
 import type { Episode, Title } from '../../api/contract';
 import { S } from '../../lib/strings';
@@ -14,7 +14,7 @@ function sub(ep: Episode, title: Title, p?: { position: number; duration: number
   return '';
 }
 
-export function EpisodeList({ title, episodes, currentId, onPick, compact }: {
+export const EpisodeList = memo(function EpisodeList({ title, episodes, currentId, onPick, compact }: {
   /** Тесная версия для панели внутри плеера (строки ниже, кадр меньше). */
   compact?: boolean;
   title: Title;
@@ -70,4 +70,4 @@ export function EpisodeList({ title, episodes, currentId, onPick, compact }: {
       })}
     </ol>
   );
-}
+});
