@@ -1,0 +1,48 @@
+:root {
+  --bg: #131416;
+  --bg-deep: #0c0d0f;
+  --surface-1: #17181b;
+  --surface-2: #1a1b1f;
+  --surface-3: #1e1f23;
+  --surface-4: #22232a;
+  --surface-5: #26272c;
+  --surface-6: #2a2b30;
+  --surface-7: #2e2f35;
+  --surface-pressed: #3a3b42;
+  --text: #fafafa;
+  --text-desc: rgba(255, 255, 255, 0.86);
+  --text-nav: rgba(255, 255, 255, 0.78);
+  --text-2: rgba(255, 255, 255, 0.72);
+  --text-meta: rgba(255, 255, 255, 0.66);
+  --text-3: rgba(255, 255, 255, 0.62);
+  --border: rgba(255, 255, 255, 0.06);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --accent: #6d4aff;
+  --on-accent: #ffffff;
+  --star: #ffc53d;
+  --scrim: rgba(12, 13, 15, 0.78);
+  --header-bg: rgba(19, 20, 22, 0.86);
+
+  --gutter: 16px;
+  --section-gap: 28px;
+  --radius-cover: 14px;
+  --radius-poster: 18px;
+  --radius-player: 16px;
+  --radius-panel: 16px;
+  --radius-pill: 9999px;
+  --nav-h: 64px;
+  --header-h: 60px;
+  --font: 'Exo 2', system-ui, sans-serif;
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --gutter: 32px;
+    --section-gap: 40px;
+    --radius-cover: 16px;
+    --radius-poster: 20px;
+    --radius-player: 18px;
+    --header-h: 72px;
+    --nav-h: 0px;
+  }
+}
