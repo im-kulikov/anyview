@@ -1,5 +1,6 @@
 import type { Episode } from '../../api/contract';
 import { isWatched, type ProgressEntry } from '../../lib/storage';
+import { isResumable } from './playerModel';
 
 type Progress = Record<string, ProgressEntry>;
 
@@ -16,7 +17,7 @@ export function prevEpisode(episodes: Episode[], currentId: string): Episode | u
 }
 
 /**
- * Какую серию открыть (SPEC §5.4): ?episode= → начатая и не досмотренная (самая свежая) →
+ * Какую серию открыть (SPEC §5.4): ?episode= → начатая (> RESUME_MIN с) и не досмотренная (самая свежая) →
  * первая доступная после последней просмотренной → первая доступная.
  */
 export function pickEpisode(episodes: Episode[], urlEpisodeId: string | null, progress: Progress): Episode | undefined {
@@ -25,12 +26,13 @@ export function pickEpisode(episodes: Episode[], urlEpisodeId: string | null, pr
   if (fromUrl) return fromUrl;
 
   const entries = available.flatMap((e) => (progress[e.id] ? [{ e, p: progress[e.id] }] : []));
-  const started = entries.filter(({ p }) => p.position > 0 && !isWatched(p)).sort((a, b) => b.p.updatedAt - a.p.updatedAt)[0];
+  const started = entries.filter(({ p }) => isResumable(p)).sort((a, b) => b.p.updatedAt - a.p.updatedAt)[0];
   if (started) return started.e;
 
-  const lastDone = entries.filter(({ p }) => isWatched(p)).sort((a, b) => b.p.updatedAt - a.p.updatedAt)[0];
-  if (lastDone) {
-    const after = nextEpisode(episodes, lastDone.e.id);
+  // «Последняя просмотренная» — по порядку в плейлисте, а не по времени: пересмотр серии 1 не возвращает к серии 2.
+  const lastDone = entries.filter(({ p }) => isWatched(p)).map(({ e }) => episodes.indexOf(e)).sort((a, b) => b - a)[0];
+  if (lastDone !== undefined) {
+    const after = nextEpisode(episodes, episodes[lastDone].id);
     if (after) return after;
   }
   return available[0];
