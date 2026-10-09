@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
 import { Heart, Play, Star } from 'lucide-react';
 import { ApiError, type Episode, type Source, type Title } from '../../api/contract';
-import { useEpisodes, useRelated, useTitle } from '../../api/hooks';
+import { useDetails, useEpisodes, useRelated, useTitle } from '../../api/hooks';
 import { Cover } from '../../components/Cover';
 import { ErrorState } from '../../components/ErrorState';
 import { Skeleton } from '../../components/Skeleton';
@@ -51,6 +51,7 @@ function TitleBody({ title, episodes, episodesPending }: { title: Title; episode
   const [params, setParams] = useSearchParams();
   const progress = useStore(progressStore);
   const favorites = useStore(favoritesStore);
+  const details = useDetails(title.id).data; // как и связи: ошибка молча скрывает блоки, страницу не задерживает
   const relatedQ = useRelated(title.id); // стартует, когда тайтл уже есть: страницу не задерживает
   const playerRef = useRef<PlayerHandle>(null);
   const [source, setSource] = useState<Source | undefined>();
@@ -82,8 +83,14 @@ function TitleBody({ title, episodes, episodesPending }: { title: Title; episode
     [S.title.infoYear, title.year ? String(title.year) : undefined],
     [S.title.infoStatus, statusLabel(title.status) || undefined],
     [S.title.infoDirector, title.credits.directors.join(', ') || undefined],
+    [S.title.infoStudio, details?.studios.join(', ') || title.credits.studios.join(', ') || undefined],
+    [S.title.infoSource, details?.source],
+    [S.title.infoAuthor, details?.author],
     [S.title.infoVoice, title.voiceovers.join(', ') || undefined],
   ];
+
+  // жанры animevost + жанры/темы из баз, без дублей (регистр не важен)
+  const tags = [...new Map([...title.genres.map((g) => g.name), ...(details?.genres ?? [])].map((n) => [n.toLowerCase(), n])).values()];
 
   return (
     <main className={styles.main}>
@@ -106,7 +113,7 @@ function TitleBody({ title, episodes, episodesPending }: { title: Title; episode
               {meta && <p className={styles.meta}>{meta}</p>}
               <h1>{title.name}</h1>
               {title.originalName && <p className={styles.orig}>{title.originalName}</p>}
-              {(rating || title.ageRating) && (
+              {(rating || title.ageRating || details?.ageRating) && (
                 <div className={styles.rate}>
                   {rating && (
                     <>
@@ -114,7 +121,7 @@ function TitleBody({ title, episodes, episodesPending }: { title: Title; episode
                       {rating.votes !== undefined && <span>{S.title.votes(formatNumber(rating.votes), votesWord(rating.votes))}</span>}
                     </>
                   )}
-                  {title.ageRating && <span className={styles.age}>{title.ageRating}</span>}
+                  {(title.ageRating ?? details?.ageRating) && <span className={styles.age}>{title.ageRating ?? details?.ageRating}</span>}
                 </div>
               )}
             </div>
@@ -160,10 +167,22 @@ function TitleBody({ title, episodes, episodesPending }: { title: Title; episode
               </section>
             )}
 
-            {title.genres.length > 0 && (
+            {tags.length > 0 && (
               <ul aria-label={S.title.tags} className={styles.tags}>
-                {title.genres.map((g) => <li key={g.id}>#{g.name}</li>)}
+                {tags.map((g) => <li key={g}>#{g}</li>)}
               </ul>
+            )}
+
+            {details && details.characters.length > 0 && (
+              <section aria-labelledby="chars-h" className={styles.chars}>
+                <h2 id="chars-h">{S.title.characters}</h2>
+                <ul>
+                  {details.characters.map((c) => (
+                    <li key={c.name}><b>{c.name}</b>{c.voiceActor && <span>{S.title.voicedBy(c.voiceActor)}</span>}</li>
+                  ))}
+                </ul>
+                <small>{S.title.dataFrom}</small>
+              </section>
             )}
           </div>
         </div>

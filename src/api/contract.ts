@@ -146,6 +146,26 @@ export interface RelatedTitles {
   similar: TitleSummary[];      // OVA, фильмы, спэшлы, спин-оффы, ремейки; без самого тайтла, по году; ≤ 40
 }
 
+/** Главный герой и его японский сейю. */
+export interface CharacterInfo {
+  name: string;
+  voiceActor?: string;
+}
+
+/**
+ * Дополнительные сведения о тайтле из внешних баз (отдельно от `Title`: грузятся вторым запросом, страницу не задерживают).
+ * Пустой результат — штатный ответ: тайтл в базах не найден или сведений нет.
+ */
+export interface TitleDetails {
+  genres: string[];             // RU, жанры и темы
+  source?: string;              // первоисточник: 'Ранобэ', 'Манга'
+  author?: string;              // автор оригинала
+  ageRating?: string;           // 'PG-13', 'R-17'
+  studios: string[];
+  characters: CharacterInfo[];  // главные герои, ≤ 6
+  providers: string[];          // откуда сведения: ['shikimori', 'anilist']
+}
+
 /** Что умеет бэкенд: фронтенд рисует «скоро» по status, а не по хардкоду. */
 export interface CatalogInfo {
   types: { type: ContentType; label: string; status: 'available' | 'coming_soon' }[];

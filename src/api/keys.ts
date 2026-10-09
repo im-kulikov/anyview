@@ -6,6 +6,7 @@ export const keys = {
   updates: (type: ContentType = 'anime', pageSize = FEED_PAGE_SIZE) => ['updates', type, pageSize] as const,
   title: (id: string) => ['title', id] as const,
   episodes: (id: string) => ['episodes', id] as const,
+  details: (id: string) => ['details', id] as const,
   related: (id: string) => ['related', id] as const,
   sources: (episodeId: string) => ['sources', episodeId] as const,
   search: (q: string) => ['search', q] as const,

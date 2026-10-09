@@ -19,9 +19,9 @@ test('другой провайдер — без подсказок про anime
 
 test('CSP: connect-src только из баз, скрипты только свои', () => {
   const c = csp({ VITE_ANIMEVOST_BASES: 'https://a.test/v1,https://b.test/v1,https://a.test/v2' });
-  expect(c).toContain("connect-src 'self' https://a.test https://b.test;");
+  expect(c).toContain("connect-src 'self' https://a.test https://b.test https://shikimori.io https://graphql.anilist.co;");
   expect(c).toContain("script-src 'self';");
-  expect(csp({ VITE_PROVIDER: 'anyview', VITE_API_BASE: 'https://api.me/x' })).toContain("connect-src 'self' https://api.me;");
+  expect(csp({ VITE_PROVIDER: 'anyview', VITE_API_BASE: 'https://api.me/x' })).toContain("connect-src 'self' https://api.me https://shikimori.io https://graphql.anilist.co;");
 });
 
 test('CSP: источники Google и Firebase — только при заданной конфигурации синхронизации (ADR-28)', () => {

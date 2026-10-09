@@ -18,6 +18,9 @@ export function headHints(env: Env): HtmlTagDescriptor[] {
   ];
 }
 
+/** Внешние базы сведений о тайтле (ADR-30): Shikimori и AniList. */
+const EXTERNAL = ['https://shikimori.io', 'https://graphql.anilist.co'];
+
 /** Meta-CSP: connect-src строится из баз API, остальное фиксировано (ADR-20). Только в сборке: dev-сервер Vite использует inline-скрипты. */
 export function csp(env: Env): string {
   const bases = (env.VITE_PROVIDER || 'animevost') === 'anyview' ? [env.VITE_API_BASE ?? ''] : parseBases(env.VITE_ANIMEVOST_BASES);
@@ -30,7 +33,7 @@ export function csp(env: Env): string {
     `script-src 'self'${sync ? ` ${gsi}client` : ''}`, // скрипт Google Identity Services
     `style-src 'self' 'unsafe-inline'${sync ? ` ${gsi}style` : ''}`, // стиль кнопки GIS
     ...(sync ? [`frame-src ${gsi}`] : []), // iframe кнопки входа
-    `connect-src 'self' ${[...connect, ...(sync ? [gsi, 'https://identitytoolkit.googleapis.com', 'https://securetoken.googleapis.com', 'https://firestore.googleapis.com'] : [])].join(' ')}`.trim(), // GIS; Firebase Auth (вход, обновление токена); Firestore REST
+    `connect-src 'self' ${[...connect, ...EXTERNAL, ...(sync ? [gsi, 'https://identitytoolkit.googleapis.com', 'https://securetoken.googleapis.com', 'https://firestore.googleapis.com'] : [])].join(' ')}`.trim(), // GIS; Firebase Auth (вход, обновление токена); Firestore REST
     "img-src 'self' https: data:",
     "media-src https: blob:",
     "font-src 'self'",
