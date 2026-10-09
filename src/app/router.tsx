@@ -1,6 +1,6 @@
 import { createBrowserRouter } from 'react-router';
 import { Layout } from './Layout';
-import { Stub } from './Stub';
+import { SearchPage } from '../features/search/SearchPage';
 import { HomePage } from '../features/home/HomePage';
 import { CatalogPage } from '../features/catalog/CatalogPage';
 import { SoonPage } from '../features/soon/SoonPage';
@@ -20,7 +20,7 @@ export const router = createBrowserRouter(
           path: '/title/:id',
           lazy: async () => ({ Component: (await import('../features/title/TitlePage')).TitlePage }),
         },
-        { path: '/search', element: <Stub name="Поиск" /> },
+        { path: '/search', element: <SearchPage /> },
         { path: '*', element: <NotFoundPage /> },
       ],
     },

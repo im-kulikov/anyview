@@ -15,11 +15,12 @@ interface Props {
   /** Бейдж «N серия» — только в лентах обновлений. */
   showEpisode?: boolean;
   priority?: boolean;
+  showOriginal?: boolean;
   className?: string;
   onOpen?: () => void;
 }
 
-export function TitleCard({ title: t, showEpisode, priority, className = '', onOpen }: Props) {
+export function TitleCard({ title: t, showEpisode, priority, showOriginal, className = '', onOpen }: Props) {
   const qc = useQueryClient();
   const meta = cardMeta(t);
   // Префетч только на десктопе по наведению (SPEC §5.3): тайтл берётся из кэша адаптера.
@@ -40,6 +41,7 @@ export function TitleCard({ title: t, showEpisode, priority, className = '', onO
       <span className={styles.text}>
         {meta && <span className={styles.meta}>{meta}</span>}
         <span className={styles.name}>{t.name}</span>
+        {showOriginal && t.originalName && <span className={styles.orig}>{t.originalName}</span>}
       </span>
     </Link>
   );
