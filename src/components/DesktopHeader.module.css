@@ -55,3 +55,20 @@
   max-width: 420px;
   display: flex;
 }
+
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-pill);
+  color: var(--text-nav);
+}
+.icon:hover {
+  background: var(--surface-5);
+}
+.icon.active {
+  background: var(--accent);
+  color: var(--on-accent);
+}

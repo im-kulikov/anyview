@@ -23,6 +23,10 @@ export const router = createBrowserRouter(
           lazy: async () => ({ Component: (await import('../features/title/TitlePage')).TitlePage }),
         },
         { path: '/search', element: <SearchPage /> },
+        {
+          path: '/sync',
+          lazy: async () => ({ Component: (await import('../features/sync/SyncPage')).SyncPage }),
+        },
         { path: '*', element: <NotFoundPage /> },
       ],
     },

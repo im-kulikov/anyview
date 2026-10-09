@@ -92,6 +92,7 @@ export function createRemote(cfg: SyncConfig, hooks: Hooks): Remote {
           signInWithCredential(auth, GoogleAuthProvider.credential(credential)).catch((e) => hooks.onError(e));
         },
       });
+      el.replaceChildren(); // повторный вызов (StrictMode, повторный клик) не должен плодить кнопки
       id.renderButton(el, { type: 'standard', theme: 'filled_black', size: 'large', text: 'continue_with', shape: 'pill', locale: 'ru', width: 280 });
     },
 

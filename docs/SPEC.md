@@ -75,10 +75,13 @@ src/
       comingSoon.ts        ← сериалы и фильмы: catalog() → coming_soon
   features/
     home/  catalog/  soon/  notfound/  search/
+    sync/     SyncPage — экран `/sync` (ленивый чанк, §5.8)
     title/    TitlePage, ExpandableText
     player/   Player, EpisodeList, pickEpisode, chooseSource, useMediaSession (+ тесты)
   components/     TitleCard, ContinueCard, Cover, Rail, PosterGrid, SectionHeader, Header, BottomNav,
                   DesktopHeader, SearchField, Skeleton, ErrorState, RatingPill, Logo, Footer, OfflineBanner
+  sync/           код синхронизации (ADR-27, ADR-28), только динамическим import(): merge.ts (чистое слияние), schedule.ts,
+                  errors.ts, config.ts, engine.ts (состояние и расписание), firebase.ts (Firebase SDK и Google Identity Services)
   lib/            storage.ts  format.ts  strings.ts  https.ts  useMediaQuery.ts
                   useDebouncedValue.ts  useDocumentTitle.ts
   styles/         tokens.css  global.css
@@ -86,6 +89,8 @@ public/
   brand/          logo, favicon, иконки (см. ASSETS.md)
   fonts/          Exo 2 (woff2: cyrillic, latin, latin-ext), свой хостинг
   manifest.webmanifest
+firestore.rules     ← правила Firestore (docs/SYNC.md)
+.env.production     ← публичная конфигурация сборки: VITE_FIREBASE_*, VITE_GOOGLE_CLIENT_ID
 config/           htmlPlugin.ts: preconnect/preload и CSP в index.html из переменных окружения (+ тест)
 scripts/          check-budget.mjs: бюджет стартового JS в CI
 ```
@@ -103,6 +108,8 @@ scripts/          check-budget.mjs: бюджет стартового JS в CI
 | `VITE_PROVIDER` | `animevost` | `animevost` или будущий `anyview`; неизвестное значение — ошибка при старте | частично: `anyview` — заготовка, все вызовы падают ошибкой «not implemented» |
 | `VITE_API_BASE` | — | база своего API (`anyview`) | частично: попадает в `connect-src` CSP и в текст ошибки заглушки |
 | `VITE_SITE_URL` | `https://im-kulikov.github.io` + `VITE_BASE` | абсолютный адрес сайта для `og:image` (читает только сборка) | да |
+| `VITE_FIREBASE_API_KEY`, `_AUTH_DOMAIN`, `_PROJECT_ID`, `_APP_ID` (обязательные), `_STORAGE_BUCKET`, `_MESSAGING_SENDER_ID` | заданы в `.env.production` | публичная конфигурация Firebase для синхронизации; не заданы — синхронизации нет | да (`src/sync/config.ts`, CSP) |
+| `VITE_GOOGLE_CLIENT_ID` | задан в `.env.production` | OAuth Web Client ID для входа через Google Identity Services | да |
 
 Провайдер выбирается в `src/api/index.ts` (`createProvider`). Образец — `.env.example`.
 
@@ -118,10 +125,11 @@ scripts/          check-budget.mjs: бюджет стартового JS в CI
 | `/movies` | Заглушка «Фильмы» | `Soon` (section=movies) / `DesktopSoon` |
 | `/title/:id` | Тайтл; `?episode=<episodeId>` открывает нужную серию | `Title` / `DesktopTitle` |
 | `/search?q=` | Поиск | `Search` / `DesktopSearch` |
+| `/sync` | Синхронизация между устройствами (§5.8) | нет макета, DESIGN §6 |
 | `*` | 404: «Такой страницы нет» + «На главную», «Аниме» | — |
 
 - `id` непрозрачный (в MVP `av-4020`).
-- Страница тайтла с плеером — ленивый чанк (`lazy`). Поиск — **в основном чанке**: на iOS клавиатура открывается, только если фокус ставится синхронно в обработчике касания (§5.6).
+- Страница тайтла с плеером и экран `/sync` — ленивые чанки (`lazy`). Поиск — **в основном чанке**: на iOS клавиатура открывается, только если фокус ставится синхронно в обработчике касания (§5.6).
 - `<ScrollRestoration />` возвращает позицию прокрутки при «Назад». Поэтому прокручивается **окно**, а не внутренний контейнер (§5, общий каркас).
 - Смена query-параметров без смены экрана (`?episode=`, `?q=`) — через `setSearchParams(…, { replace: true, preventScrollReset: true })`, иначе роутер прокрутит страницу наверх.
 - `document.title` на каждой странице: «Название — anyview».
@@ -235,6 +243,17 @@ scripts/          check-budget.mjs: бюджет стартового JS в CI
 - Ничего не нашли — «Ничего не нашли. Попробуйте оригинальное название или часть слова».
 - Запрос попадает в «недавние», когда из результатов открыли тайтл.
 
+### 5.8 Синхронизация `/sync`
+
+Экран без макета (DESIGN §6). Ссылка «Синхронизация» — в подвале (телефон и десктоп) и иконка-облако в десктопной шапке. Подробности, модель данных и ограничения — [SYNC.md](SYNC.md), решения — ADR-27 и ADR-28.
+
+- Пояснение: что синхронизируется (позиции и история, избранное) и что нет (настройки плеера), блок «Конфиденциальность».
+- Не вошли: кнопка «Включить синхронизацию». Только после неё грузятся код Firebase и скрипт Google, появляется кнопка Google (Google Identity Services). Если вход уже выполнялся на этом устройстве (флаг `anyview:sync`), синхронизация поднимается в фоне при старте.
+- Вошли: «Вы вошли как …», статус (`role="status"`, `aria-live="polite"`): «Синхронизация…», «Последняя синхронизация: ЧЧ:ММ», ошибка (`role="alert"`) и «Повторить»; «Синхронизировать сейчас», «Выйти», «Удалить данные из облака» (двухшаговое подтверждение; после удаления выход на этом устройстве).
+- Конфигурация Firebase не задана: «Синхронизация недоступна», код провайдера не загружается.
+- Когда синхронизируем: вход, старт, возврат на вкладку (не чаще раза в 60 с), через 5 с после изменения данных, при уходе со страницы (best-effort), офлайн — ничего, по `online` — сразу; сетевые ошибки — повтор 5, 10, 20 … с.
+- Кнопки ≥ 44 px, шрифт ≥ 16 px у полей (полей нет), тексты — `strings.ts`.
+
 ### 5.7 Заглушка `/series`, `/movies`
 
 По макету `Soon`: иллюстрация из веером разложенных пустых карточек с иконкой раздела и плашкой «В РАЗРАБОТКЕ», заголовок «Сериалы уже в пути» / «Фильмы уже в пути», текст, три пункта «что будет», кнопки «Смотреть аниме» и «На главную». Активный пункт навигации — соответствующий раздел. Тексты — в макете.
@@ -291,6 +310,7 @@ scripts/          check-budget.mjs: бюджет стартового JS в CI
 - Под каждую картинку зарезервировано место (`aspect-ratio`).
 - Тайтл с плеером — отдельный чанк; стартовый JS ≤ 150 КБ gzip.
 - Шрифт: переменный Exo 2 400–800, подмножества cyrillic / latin / latin-ext с `unicode-range` (скачиваются только нужные), `display=swap`.
+- Синхронизация не попадает в стартовый бандл: `firebase` (≈ 57 КБ gzip) и `engine` (≈ 3 КБ) — отдельные чанки, грузятся после действия пользователя или при выполненном входе (через 2 с после старта). Единственная добавка к стартовому коду — условие в `main.tsx`.
 - Стартовый JS проверяется в CI (`scripts/check-budget.mjs`, ≤ 150 КБ gzip).
 - Анимации — только `transform`/`opacity`. Скелетоны замирают при `prefers-reduced-motion`.
 - Нет CSS-in-JS-рантайма и UI-китов. Виртуализацию и `content-visibility` не добавлять, пока профилировщик не покажет проблему.
@@ -318,8 +338,8 @@ scripts/          check-budget.mjs: бюджет стартового JS в CI
 - Деплой в **GitHub Pages через GitHub Actions** (Settings → Pages → Source: GitHub Actions; если прав включить из CI не хватает — попросить владельца репозитория).
 - Workflow `.github/workflows/deploy.yml`: на `pull_request` — только проверки (шаг 1), без публикации; на `push` в `main` и вручную (`workflow_dispatch`) — полный цикл. Мерж с красным CI запрещён.
   1. `npm ci` → `npm run lint` → `npm run typecheck` → `npm test -- --run` → `npm run build` (`build` = `tsc --noEmit && vite build`, типы проверяются дважды намеренно) → `node scripts/check-budget.mjs` (бюджет стартового JS).
-  2. Прямые ссылки на SPA: скопировать `dist/index.html` в `dist/anime.html`, `series.html`, `movies.html`, `search.html` (Pages отдаёт `/anyview/anime` из `anime.html` с кодом 200) и в `dist/404.html` (для `/title/*` — открывается приложение, но с кодом 404; для MVP приемлемо). Работу `x.html` проверить на первом деплое.
-  3. `actions/upload-pages-artifact` → `actions/deploy-pages` (permissions `pages: write`, `id-token: write` только у job `deploy`) → `curl` на `/`, `/anime`, `/search`, манифест и шрифт: красный деплой, если что-то не отвечает.
+  2. Прямые ссылки на SPA: скопировать `dist/index.html` в `dist/anime.html`, `series.html`, `movies.html`, `search.html`, `sync.html` (Pages отдаёт `/anyview/anime` из `anime.html` с кодом 200) и в `dist/404.html` (для `/title/*` — открывается приложение, но с кодом 404; для MVP приемлемо). Работу `x.html` проверить на первом деплое.
+  3. `actions/upload-pages-artifact` → `actions/deploy-pages` (permissions `pages: write`, `id-token: write` только у job `deploy`) → `curl` на `/`, `/anime`, `/search`, `/sync`, манифест и шрифт: красный деплой, если что-то не отвечает.
 - Vite `base` = `VITE_BASE` (по умолчанию `/anyview/`). Роутер получает `basename` из `import.meta.env.BASE_URL`.
 - `public/manifest.webmanifest` Vite не переписывает: `start_url` и `scope` — `"./"`, пути иконок — относительные.
 - В README репозитория: адрес сайта, команды, переменные окружения, структура, известные ограничения.
