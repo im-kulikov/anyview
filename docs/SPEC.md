@@ -84,7 +84,7 @@ public/
 | Переменная | По умолчанию | Назначение |
 |---|---|---|
 | `VITE_BASE` | `/anyview/` | `base` для GitHub Pages (имя репозитория) |
-| `VITE_PROVIDER` | `animevost` | `animevost` или будущий `anyview` |
+| `VITE_PROVIDER` | `animevost` | `animevost` или будущий `anyview` (сейчас все вызовы падают ошибкой «не реализовано»; неизвестное значение — ошибка при старте) |
 | `VITE_ANIMEVOST_BASES` | `https://api.animetop.info/v1,https://api.animevost.org/v1` | список баз, пробуем по порядку |
 | `VITE_API_BASE` | — | база своего API (будущее) |
 
