@@ -5,7 +5,9 @@
   display: flex;
   gap: 12px;
   overflow-x: auto;
-  padding: 0 var(--gutter);
+  /* Воздух под обводку фокуса: overflow-x обрезает и по вертикали. */
+  padding: 4px var(--gutter);
+  margin: -4px 0;
   scroll-snap-type: x proximity;
   scroll-padding: 0 var(--gutter);
   scrollbar-width: none;
@@ -23,8 +25,9 @@
 @media (min-width: 1024px) {
   .rail {
     gap: 20px;
-    padding: 0;
-    scroll-padding: 0;
+    padding: 4px;
+    margin: -4px;
+    scroll-padding: 0 4px;
   }
 }
 @media (hover: hover) and (pointer: fine) {
