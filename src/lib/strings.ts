@@ -2,7 +2,7 @@
 export const S = {
   appName: 'anyview',
   tagline: 'Аниме, сериалы и фильмы',
-  nav: { home: 'Главная', anime: 'Аниме', series: 'Сериалы', movies: 'Фильмы', sections: 'Разделы', soonBadge: 'скоро' },
+  nav: { sync: 'Аккаунт', home: 'Главная', anime: 'Аниме', series: 'Сериалы', movies: 'Фильмы', sections: 'Разделы', soonBadge: 'скоро' },
   logoLabel: 'anyview — на главную',
   search: {
     placeholder: 'Найти аниме…',
