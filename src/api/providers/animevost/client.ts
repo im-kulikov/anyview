@@ -11,7 +11,15 @@ export interface Client {
 
 const isAbort = (e: unknown) => e instanceof DOMException && e.name === 'AbortError';
 
-export function createClient(bases: string[]): Client {
+export const REQUEST_TIMEOUT_MS = 10_000;
+
+/** Таймаут + сигнал вызывающего: ушёл со страницы — AbortError, завис сервер — TimeoutError. */
+const withTimeout = (init: RequestInit | undefined, ms: number): RequestInit => ({
+  ...init,
+  signal: init?.signal ? AbortSignal.any([init.signal, AbortSignal.timeout(ms)]) : AbortSignal.timeout(ms),
+});
+
+export function createClient(bases: string[], timeoutMs = REQUEST_TIMEOUT_MS): Client {
   let current = 0;
   const worked = new Set<string>();
 
@@ -28,7 +36,7 @@ export function createClient(bases: string[]): Client {
     baseWorked: () => worked.has(bases[current]),
     async requestOnce(path, init) {
       const base = bases[current];
-      const res = await fetch(base + path, init);
+      const res = await fetch(base + path, withTimeout(init, timeoutMs));
       if (res.ok) worked.add(base);
       return res;
     },
@@ -37,15 +45,19 @@ export function createClient(bases: string[]): Client {
       for (let i = 0; i < bases.length; i++) {
         const idx = (current + i) % bases.length;
         try {
-          const res = await fetch(bases[idx] + path, init);
+          const res = await fetch(bases[idx] + path, withTimeout(init, timeoutMs));
+          const data = await parse<T>(res);
           current = idx;
           worked.add(bases[idx]);
-          return await parse<T>(res);
+          return data;
         } catch (e) {
-          if (isAbort(e) || e instanceof ApiError) throw e;
+          if (isAbort(e)) throw e;
+          // 4xx — ответ по существу, другая база не поможет; сеть, таймаут, 5xx и мусорное тело — пробуем следующую
+          if (e instanceof ApiError && e.kind === 'http' && (e.status ?? 0) < 500) throw e;
           last = e;
         }
       }
+      if (last instanceof ApiError) throw last;
       throw new ApiError('network', last instanceof Error ? last.message : 'Нет соединения');
     },
   };

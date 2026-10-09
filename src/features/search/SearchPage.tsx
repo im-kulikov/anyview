@@ -36,7 +36,7 @@ export function SearchPage() {
         <div>
           <h1>{active ? S.searchPage.heading(q) : S.searchPage.title}</h1>
           {active && items && <p className={styles.found}>{S.searchPage.found(items.length)}</p>}
-          {!active && <p className={styles.found}>{S.searchPage.popular}</p>}
+          {!active && <p className={styles.found}>{raw.trim().length === 1 ? S.searchPage.minChars : S.searchPage.popular}</p>}
         </div>
         <div role="group" aria-label={S.searchPage.scope} className={styles.scope}>
           <button type="button" aria-pressed="true" className={styles.on}>{S.searchPage.anime}</button>
@@ -120,7 +120,7 @@ function List({ items, onOpen }: { items: TitleSummary[]; onOpen: () => void }) 
 
 function Loading() {
   return (
-    <div role="status" aria-label="Загрузка">
+    <div role="status" aria-label={S.common.loading} className={styles.loading}>
       <ul className={styles.list}>
         {Array.from({ length: 5 }, (_, i) => (
           <li key={i} className={styles.row}>

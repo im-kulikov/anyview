@@ -17,6 +17,10 @@
   overflow: hidden;
   clip-path: inset(50%);
 }
+.loading {
+  /* Не короче экрана: подвал не прыгает при появлении результатов (CLS). */
+  min-height: 100dvh;
+}
 .found {
   order: 2;
   margin: 16px var(--gutter) 4px;
