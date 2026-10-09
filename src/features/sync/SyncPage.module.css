@@ -1,0 +1,148 @@
+.main {
+  padding: 24px var(--gutter) 40px;
+}
+.content {
+  max-width: 560px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.icon {
+  color: var(--text-3);
+}
+.content h1 {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.lead {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--surface-2);
+}
+.card h2 {
+  font-size: 16px;
+  font-weight: 700;
+}
+.card ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 14px;
+}
+.card li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.card li svg {
+  flex: none;
+  color: var(--accent);
+}
+.status {
+  margin: 0;
+  min-height: 1.4em;
+  font-size: 14px;
+  color: var(--text-2);
+}
+.error {
+  margin: 0;
+  font-size: 14px;
+  color: var(--star);
+}
+.who {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.hint {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-3);
+}
+.google {
+  min-height: 44px;
+  display: flex;
+}
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.primary,
+.secondary,
+.danger {
+  height: 48px;
+  padding: 0 24px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.primary {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.secondary {
+  background: var(--surface-3);
+  color: var(--text);
+}
+.danger {
+  background: var(--star);
+  color: var(--bg);
+}
+.primary:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.linkButton {
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  color: var(--text-2);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.confirm p {
+  margin: 0;
+}
+
+@media (min-width: 1024px) {
+  .main {
+    padding-top: 56px;
+  }
+  .content h1 {
+    font-size: 36px;
+  }
+  .actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+}

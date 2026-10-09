@@ -9,7 +9,7 @@
 3. `docs/DESIGN.md` + `docs/design/mockups/*.dc.html` — токены, компоненты, макеты всех экранов (телефон 390 px и десктоп 1440 px).
 4. `docs/RESEARCH.md` — источники и фаза 2 (для контекста, в MVP не реализуем).
 5. `docs/ASSETS.md` — логотип и иконки.
-6. `docs/STATUS.md` — фактическое состояние: замеры, отступления, ограничения, что не проверено. `docs/adr/` — журнал решений. `README.md` и `CONTRIBUTING.md` — запуск, структура, процесс.
+6. `docs/STATUS.md` — фактическое состояние: замеры, отступления, ограничения, что не проверено. `docs/SYNC.md` — синхронизация между устройствами (Firebase, правила, чек-лист). `docs/adr/` — журнал решений. `README.md` и `CONTRIBUTING.md` — запуск, структура, процесс.
 
 ## Правила
 
@@ -42,6 +42,6 @@ npm test            # vitest
 
 ## Деплой
 
-`.github/workflows/deploy.yml` (SPEC.md §10): на `pull_request` — только проверки (lint, typecheck, test, build), без публикации; на push в `main` (и вручную) — те же проверки → сборка → копии `index.html` для прямых ссылок (`anime.html`, `series.html`, `movies.html`, `search.html`, `404.html`) → GitHub Pages. `base` берётся из `VITE_BASE` (по умолчанию `/anyview/`). Pages включён; если когда-нибудь окажется выключен — Settings → Pages → Source: GitHub Actions. Путь `/pages` через прокси облачной сессии недоступен (проверен только GET, 403), поэтому не пытаться включать Pages через `gh api`, а написать владельцу, что нажать.
+`.github/workflows/deploy.yml` (SPEC.md §10): на `pull_request` — только проверки (lint, typecheck, test, build), без публикации; на push в `main` (и вручную) — те же проверки → сборка → копии `index.html` для прямых ссылок (`anime.html`, `series.html`, `movies.html`, `search.html`, `sync.html`, `404.html`) → GitHub Pages. `base` берётся из `VITE_BASE` (по умолчанию `/anyview/`). Pages включён; если когда-нибудь окажется выключен — Settings → Pages → Source: GitHub Actions. Путь `/pages` через прокси облачной сессии недоступен (проверен только GET, 403), поэтому не пытаться включать Pages через `gh api`, а написать владельцу, что нажать.
 
 В облачной сессии GraphQL недоступен целиком: `gh pr create/view/list/checks/merge` отвечают 403. PR создавать и читать через REST (`gh api repos/im-kulikov/anyview/pulls ...`) или MCP-инструменты GitHub; мержить через REST: `gh api -X PUT repos/im-kulikov/anyview/pulls/<N>/merge -f merge_method=squash` (или MCP `merge_pull_request`). Ревью-треды, auto-merge и ready-for-review прокси открывает отдельными маршрутами `.../ccr/...` (подсказка есть в тексте 403).

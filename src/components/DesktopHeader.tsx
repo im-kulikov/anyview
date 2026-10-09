@@ -1,4 +1,5 @@
 import { NavLink, useLocation } from 'react-router';
+import { Cloud } from 'lucide-react';
 import { Logo } from './Logo';
 import { SearchField } from './SearchField';
 import { S } from '../lib/strings';
@@ -30,6 +31,9 @@ export function DesktopHeader() {
         <div className={styles.search}>
           <SearchField active={false} />
         </div>
+        <NavLink to="/sync" aria-label={S.sync.navLabel} title={S.sync.navLabel} className={({ isActive }) => `${styles.icon} ${isActive ? styles.active : ''}`}>
+          <Cloud size={20} aria-hidden="true" />
+        </NavLink>
       </div>
     </header>
   );

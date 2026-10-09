@@ -49,6 +49,10 @@ npm test -- --run src/lib/format.test.ts   # один файл
 | `VITE_PROVIDER` | `animevost` | `animevost` или `anyview` (заготовка: все вызовы падают ошибкой «not implemented»); `src/api/index.ts` |
 | `VITE_API_BASE` | — | база своего API для `anyview`; пока только попадает в CSP и текст ошибки |
 | `VITE_SITE_URL` | `https://im-kulikov.github.io` + `VITE_BASE` | абсолютный адрес для `og:image` (`config/htmlPlugin.ts`) |
+| `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID` (+ `_STORAGE_BUCKET`, `_MESSAGING_SENDER_ID`) | значения проекта в `.env.production` | публичная конфигурация синхронизации (не секреты); без них `/sync` пишет «Синхронизация недоступна» (`src/sync/config.ts`) |
+| `VITE_GOOGLE_CLIENT_ID` | в `.env.production` | OAuth Web Client ID для входа Google |
+
+`.env.production` лежит в репозитории и читается только при `npm run build`; в `npm run dev` и тестах синхронизация выключена (чтобы включить в dev, скопируйте значения в `.env.local`, а в консоли Google добавьте `http://localhost:5173` в Authorized JavaScript origins). Настройка консолей, правила Firestore и ручная проверка — [docs/SYNC.md](docs/SYNC.md).
 
 `preconnect`, `preload` первой страницы ленты и `connect-src` в CSP собираются при сборке из `VITE_ANIMEVOST_BASES` и `FEED_PAGE_SIZE` (`config/htmlPlugin.ts`), вручную в `index.html` ничего менять не нужно.
 
@@ -60,7 +64,8 @@ src/
   app/                router.tsx, Layout, ErrorBoundary (RouteError), queryClient
   api/                contract.ts (типы), provider.ts (интерфейс), hooks.ts, keys.ts, index.ts
     providers/        animevost/ (client, parse, index = адаптер и маппинг), comingSoon.ts
-  features/           home, catalog, title, player, search, soon, notfound
+  features/           home, catalog, title, player, search, soon, notfound, sync (экран /sync)
+  sync/               синхронизация (слияние, Firebase, расписание); только динамический import
   components/         общие компоненты (карточки, шапки, подвал, офлайн-плашка…)
   lib/                storage, format, strings (все тексты), https, хуки
   styles/             tokens.css, global.css
@@ -91,6 +96,7 @@ Vitest, окружение `node`, без DOM. Покрыты: парсеры и
 - Lighthouse Performance на мобильном 73–78 при цели ≥ 90 (минимум 80): упирается в чужой API без сжатия и постеры одного размера. Решение — прокси фазы 2.
 - Поиск без результатов отдаёт HTTP 404 без CORS-заголовка; пустой результат отличается от сети эвристикой (API_CONTRACT.md §5.1).
 - iPhone: полноэкранный режим нативный, серию из него переключить нельзя (SPEC.md §5.5).
+- Синхронизация (docs/SYNC.md): реальный вход и запись в Firestore на устройствах не проверены; Safari стирает данные сайта после 7 дней без посещений (прогресс вернётся из облака после входа); доступность Google и Firebase из РФ не проверена.
 - Не проверено на реальных iPhone, Android, Firefox и Safari (только по описанию PR M6), а также доступ к API и видео из РФ: домены animevost могут блокироваться, на клиенте это не лечится.
 
 ## Окружение облачной сессии (Claude Code)

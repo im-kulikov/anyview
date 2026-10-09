@@ -10,5 +10,15 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
+  align-items: center;
   gap: 8px 12px;
+}
+
+/* Зона нажатия ≥ 44 px (SPEC §9) */
+.footer .link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--text-2);
+  text-decoration: underline;
 }
