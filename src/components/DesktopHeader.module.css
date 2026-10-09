@@ -35,7 +35,7 @@
 .link:hover {
   background: var(--surface-5);
 }
-.link[aria-current='page'] {
+.link.active {
   background: var(--accent);
   color: var(--on-accent);
   font-weight: 600;
@@ -46,7 +46,7 @@
   background: var(--surface-5);
   font-size: 11px;
 }
-.link[aria-current='page'] .badge {
+.link.active .badge {
   background: rgba(255, 255, 255, 0.22);
 }
 .search {

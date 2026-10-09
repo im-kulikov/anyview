@@ -5,6 +5,8 @@ import { S } from '../lib/strings';
 import { useIsDesktop } from '../lib/useMediaQuery';
 import styles from './SearchField.module.css';
 
+const URL_DELAY = 250;
+
 /**
  * Один <input> живёт в Layout и не перемонтируется при переходе на /search:
  * на iOS фокус и клавиатура сохраняются только так (SPEC §5.6).
@@ -27,10 +29,28 @@ export function SearchField({ active }: { active: boolean }) {
     if (navType === 'POP' || !state?.fromField) setValue(urlQ);
   }
 
+  // Свой <input> обновляет URL с задержкой: иначе History API вызывается на каждую клавишу (лимит WebKit ~100 за 30 с).
+  // Локальное значение при этом обновляется сразу.
+  const timer = useRef(0);
+  const pathRef = useRef(pathname);
+  useEffect(() => {
+    pathRef.current = pathname;
+  }, [pathname]);
+  useEffect(() => () => window.clearTimeout(timer.current), []);
+
   const go = (q: string) => {
+    window.clearTimeout(timer.current);
     const url = `/search${q ? `?q=${encodeURIComponent(q)}` : ''}`;
     // Первый переход — в историю (чтобы «Назад» вернул на предыдущий экран), дальше — replace.
     navigate(url, { replace: isSearch, preventScrollReset: isSearch, state: { fromField: true } });
+  };
+
+  const goLater = (q: string) => {
+    // Первый переход на /search — сразу (запись в историю, у iOS синхронно в касании); дальше — после паузы в наборе.
+    if (!isSearch) return go(q);
+    window.clearTimeout(timer.current);
+    // Если за паузу ушли со страницы поиска (ссылка, «Назад»), возвращать на /search не нужно.
+    timer.current = window.setTimeout(() => pathRef.current === '/search' && go(q), URL_DELAY);
   };
 
   useEffect(() => {
@@ -47,26 +67,31 @@ export function SearchField({ active }: { active: boolean }) {
   }, [isDesktop]);
 
   return (
-    <label className={`${styles.field} ${active ? styles.active : ''}`}>
-      <Search size={18} aria-hidden="true" className={styles.icon} />
-      <span className={styles.sr}>{S.search.label}</span>
-      <input
-        ref={inputRef}
-        type="search"
-        enterKeyHint="search"
-        autoComplete="off"
-        value={value}
-        placeholder={active ? S.search.placeholderFull : S.search.placeholder}
-        className={styles.input}
-        // iOS: фокус и переход — синхронно в обработчике касания.
-        onFocus={() => {
-          if (!isDesktop && !isSearch) go('');
-        }}
-        onChange={(e) => {
-          setValue(e.target.value);
-          go(e.target.value);
-        }}
-      />
+    <div className={`${styles.field} ${active ? styles.active : ''}`}>
+      <label className={styles.label}>
+        <Search size={18} aria-hidden="true" className={styles.icon} />
+        <span className={styles.sr}>{S.search.label}</span>
+        <input
+          ref={inputRef}
+          type="search"
+          enterKeyHint="search"
+          autoComplete="off"
+          value={value}
+          placeholder={active ? S.search.placeholderFull : S.search.placeholder}
+          className={styles.input}
+          // iOS: фокус и переход — синхронно в обработчике касания.
+          onFocus={() => {
+            if (!isDesktop && !isSearch) go('');
+          }}
+          onChange={(e) => {
+            setValue(e.target.value);
+            goLater(e.target.value);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && isSearch) go(value);
+          }}
+        />
+      </label>
       {value ? (
         <button
           type="button"
@@ -85,6 +110,6 @@ export function SearchField({ active }: { active: boolean }) {
       ) : (
         isDesktop && <kbd className={styles.kbd}>/</kbd>
       )}
-    </label>
+    </div>
   );
 }

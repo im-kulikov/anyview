@@ -48,7 +48,7 @@
   height: 48px;
   border-radius: 14px;
   background: var(--surface-6);
-  color: var(--accent);
+  color: var(--accent-fg);
   display: flex;
   align-items: center;
   justify-content: center;
