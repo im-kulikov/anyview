@@ -36,7 +36,7 @@ export function HomePage() {
         <SectionHeader title={S.home.fresh} to="/anime" label={S.home.freshAll} text={S.home.all} />
         {failed ? retry : <Rail>
           {first
-            ? fresh.map((t, i) => <TitleCard key={t.id} title={t} showEpisode priority={i < 1} className={styles.railCard} />)
+            ? fresh.map((t, i) => <TitleCard key={t.id} title={t} showEpisode priority={i < 3} className={styles.railCard} />)
             : Array.from({ length: 6 }, (_, i) => <TitleCardSkeleton key={i} className={styles.railCard} />)}
         </Rail>}
       </section>
