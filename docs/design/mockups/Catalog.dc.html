@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>anyview — аниме</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700;800&amp;display=swap">
+<style>
+body{margin:0;background:#0C0D0F}
+a{color:inherit;text-decoration:none}
+a:hover{color:inherit}
+a:focus-visible,button:focus-visible{outline:2px solid #FFFFFF;outline-offset:2px}
+.scroll{scrollbar-width:none;scroll-behavior:smooth}
+.scroll::-webkit-scrollbar{display:none}
+.clamp2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.clamp1{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@keyframes av-pulse{0%,100%{opacity:1}50%{opacity:.45}}
+.skel{animation:av-pulse 1.4s ease-in-out infinite}
+@media (prefers-reduced-motion: reduce){.skel{animation:none}}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; background: #131416; color: #FAFAFA; font-family: 'Exo 2', system-ui, sans-serif">
+
+<header style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.06)">
+<a href="Main.dc.html" aria-label="anyview — на главную" style="display: flex; align-items: center; gap: 8px; flex: none; min-height: 44px">
+<svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="10" fill="{{accent}}"></rect><path d="M13 10.5v11l8.5-5.5z" fill="#FFFFFF"></path></svg>
+<span style="font-size: 20px; font-weight: 800; letter-spacing: -0.02em">any<span style="color: {{accent}}">view</span></span>
+</a>
+<a href="Search.dc.html" style="flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 16px; border-radius: 9999px; background: #1E1F23; color: rgba(255,255,255,0.62); font-size: 15px">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+<span class="clamp1">Найти аниме…</span>
+</a>
+</header>
+<div class="scroll" style="flex: 1; min-height: 0; overflow-y: auto; padding-bottom: 28px">
+
+<div style="display: flex; flex-direction: column; gap: 4px; padding: 20px 16px 16px">
+<h1 style="margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.01em">Аниме</h1>
+<p style="margin: 0; font-size: 14px; color: rgba(255,255,255,0.66)">Последние обновления · 3 603 тайтла</p>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px 12px; padding: 0 16px">
+<sc-for list="{{items}}" as="t" hint-placeholder-count="12">
+<a href="Title.dc.html" style="display: flex; flex-direction: column; gap: 8px; min-width: 0">
+<div style="position: relative; width: 100%; aspect-ratio: 2 / 3; border-radius: 14px; overflow: hidden; background: #1E1F23">
+<img src="{{t.poster}}" alt="" style="width: 100%; height: 100%; object-fit: cover; display: block">
+<sc-if value="{{t.hasEp}}" hint-placeholder-val="{{ true }}">
+<span style="position: absolute; top: 6px; left: 6px; padding: 2px 7px; border-radius: 7px; background: {{accent}}; color: #FFFFFF; font-size: 10px; font-weight: 700">{{t.ep}}</span>
+</sc-if>
+<span style="position: absolute; right: 6px; bottom: 6px; display: flex; align-items: center; gap: 3px; padding: 3px 7px; border-radius: 9999px; background: rgba(12,13,15,0.78); font-size: 11px; font-weight: 600">
+<svg width="11" height="11" viewBox="0 0 24 24" fill="#FFC53D" aria-hidden="true"><path d="M12 2.8l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"></path></svg>{{t.rating}}</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 11px; color: rgba(255,255,255,0.66)">{{t.meta}}</span>
+<span class="clamp2" style="font-size: 13px; font-weight: 600; line-height: 1.3">{{t.ru}}</span>
+</div>
+</a>
+</sc-for>
+<sc-for list="{{skeletons}}" as="s" hint-placeholder-count="3">
+<div class="skel" aria-hidden="true" style="display: flex; flex-direction: column; gap: 8px; min-width: 0">
+<div style="width: 100%; aspect-ratio: 2 / 3; border-radius: 14px; background: #1E1F23"></div>
+<div style="width: 50%; height: 10px; border-radius: 5px; background: #1E1F23"></div>
+<div style="width: 85%; height: 12px; border-radius: 6px; background: #1E1F23"></div>
+</div>
+</sc-for>
+</div>
+<p role="status" style="margin: 16px 0 0; text-align: center; font-size: 13px; color: rgba(255,255,255,0.62)">Загружаем ещё…</p>
+
+</div>
+
+<nav aria-label="Разделы" style="flex: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 8px 8px 20px; background: #17181B; border-top: 1px solid rgba(255,255,255,0.06)">
+<a href="Main.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 4px 0; font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.62)">
+<span style="width: 56px; height: 30px; display: flex; align-items: center; justify-content: center">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5L12 3l9 7.5"></path><path d="M5 9.5V20h14V9.5"></path><path d="M10 20v-6h4v6"></path></svg>
+</span>Главная</a>
+<a href="Catalog.dc.html" aria-current="page" style="display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 4px 0; font-size: 11px; font-weight: 600; color: #FAFAFA">
+<span style="width: 56px; height: 30px; border-radius: 9999px; background: {{accent}}; display: flex; align-items: center; justify-content: center; color: #FFFFFF">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"></path><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"></path></svg>
+</span>Аниме</a>
+<a href="Soon.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 4px 0; font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.62)">
+<span style="width: 56px; height: 30px; display: flex; align-items: center; justify-content: center">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2.5"></rect><path d="M8 2.5l4 3.5 4-3.5"></path></svg>
+</span>Сериалы</a>
+<a href="Soon.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 4px 0; font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.62)">
+<span style="width: 56px; height: 30px; display: flex; align-items: center; justify-content: center">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2.5"></rect><path d="M7 3v18"></path><path d="M17 3v18"></path><path d="M3 8h4"></path><path d="M3 12h4"></path><path d="M3 16h4"></path><path d="M17 8h4"></path><path d="M17 12h4"></path><path d="M17 16h4"></path></svg>
+</span>Фильмы</a>
+</nav>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#6D4AFF","options":["#6D4AFF","#2563EB","#C93A40","#0B7A76"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? '#6D4AFF';
+    const P = {
+      p01: '/_blob/e93c54311b6ab68324473052d83d5f01', p02: '/_blob/b0806507ac02fa6fca18e681e3ec3f7e',
+      p03: '/_blob/b73d0e382c66f7a092b64e3be93fca3d', p04: '/_blob/3532bf021d33c1db4c7bf0e536fa631f',
+      p05: '/_blob/3358407546c23cebf353f261f78e4480', p06: '/_blob/d9bb53a5f48ea81f864e486c147683e8',
+      p07: '/_blob/ca958fb0c41d99035a05ad52cfc5790f', p08: '/_blob/7259e417e80fc20b75c9d43747f307ef',
+      p09: '/_blob/44dc7610eba23f6f8b7aaa43cd53079f', p10: '/_blob/1b944b9bbf74ac1f28bf44eb03a2455e',
+      p11: '/_blob/e47986e306746b9dbb7983260b549cee', p12: '/_blob/5de7a997d81f579904261b705ee2540a'
+    };
+    const T = [
+      { ru: 'Морской дракон Рю', kind: 'ТВ', year: 2026, rating: '8.4', ep: '5 серия', poster: P.p10 },
+      { ru: 'Клинок рассвета', kind: 'ТВ', year: 2026, rating: '8.6', ep: '7 серия', poster: P.p01 },
+      { ru: 'Город без теней', kind: 'ТВ', year: 2026, rating: '7.9', ep: '11 серия', poster: P.p02 },
+      { ru: 'Неоновый самурай', kind: 'ONA', year: 2026, rating: '7.4', ep: '2 серия', poster: P.p07 },
+      { ru: 'Сто дней до весны', kind: 'ТВ', year: 2025, rating: '8.3', ep: '', poster: P.p06 },
+      { ru: 'Ведьма из книжной лавки', kind: 'ТВ', year: 2026, rating: '7.6', ep: '9 серия', poster: P.p05 },
+      { ru: 'Последний поезд на Луну', kind: 'Фильм', year: 2025, rating: '8.9', ep: '', poster: P.p03 },
+      { ru: 'Хроники парящего острова', kind: 'ТВ', year: 2026, rating: '8.1', ep: '4 серия', poster: P.p04 },
+      { ru: 'Сад механических бабочек', kind: 'ТВ', year: 2026, rating: '8.0', ep: '', poster: P.p08 },
+      { ru: 'Школа звёздных картографов', kind: 'ТВ', year: 2026, rating: '7.7', ep: '', poster: P.p11 },
+      { ru: 'Тихий дозор', kind: 'ТВ', year: 2025, rating: '7.8', ep: '', poster: P.p09 },
+      { ru: 'Пепел и лаванда', kind: 'OVA', year: 2025, rating: '8.2', ep: '', poster: P.p12 }
+    ].map((t) => ({ ...t, meta: t.kind + ' · ' + t.year, hasEp: !!t.ep }));
+    return { accent, items: T, skeletons: [1, 2, 3] };
+  }
+}
+</script>
+</body>
+</html>
