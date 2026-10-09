@@ -5,7 +5,7 @@
   bottom: 0;
   z-index: 30;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
   background: var(--surface-1);
   border-top: 1px solid var(--border);
@@ -28,6 +28,28 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+.pill {
+  max-width: 100%;
+}
+/* Центральный пункт: акцентный круг, выступающий над панелью. */
+.center {
+  color: var(--text);
+  font-weight: 600;
+}
+.center .pill {
+  width: 56px;
+  height: 56px;
+  margin-top: -26px;
+  background: var(--accent);
+  color: var(--on-accent);
+  border: 4px solid var(--surface-1);
+  box-sizing: border-box;
+  box-shadow: 0 6px 16px rgba(109, 74, 255, 0.45);
+}
+.center.active .pill {
+  outline: 2px solid #fff;
+  outline-offset: 1px;
 }
 .active {
   font-weight: 600;
