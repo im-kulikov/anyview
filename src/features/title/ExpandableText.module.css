@@ -1,0 +1,40 @@
+.box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.text {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text-desc);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.clamp {
+  --lines: 4;
+  display: -webkit-box;
+  -webkit-line-clamp: var(--lines);
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.btn {
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 14px;
+  font-weight: 600;
+}
+@media (min-width: 1024px) {
+  .text {
+    font-size: 16px;
+    line-height: 1.55;
+  }
+  .clamp {
+    --lines: 3;
+  }
+}
