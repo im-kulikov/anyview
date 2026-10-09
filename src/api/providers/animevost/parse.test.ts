@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import {
-  backdropOf, formatOf, htmlToText, parseTitle, ratingOf, sortPlaylist, statusOf,
+  backdropOf, formatOf, htmlToText, parseTitle, ratingOf, resolveAirDate, sortPlaylist, statusOf,
 } from './parse';
 import { toSummary } from './index';
 import { https } from '../../../lib/https';
@@ -116,5 +116,27 @@ describe('поля', () => {
       })?.url,
     ).toBe('https://static.openni.ru/uploads/posts/2022-01/b.jpg');
     expect(backdropOf({ id: 1, title: '', urlImagePreview: 'https://x.ru/a.jpg', screenImage: ['', ''] })).toBeUndefined();
+  });
+
+  test('htmlToText: числовые сущности вне диапазона не бросают (CODE-11)', () => {
+    expect(htmlToText('a &#99999999; b &#x110000; c &#0; d &#xD800;')).toBe('a &#99999999; b &#x110000; c &#0; d &#xD800;');
+    expect(htmlToText('&#1089;&#x44F;')).toBe('ся');
+  });
+
+  test('htmlToText: «<» вне тегов сохраняется, блоки разделяются переносом (CODE-11)', () => {
+    expect(htmlToText('Рейтинг <5 и >3')).toBe('Рейтинг <5 и >3');
+    expect(htmlToText('<p>a</p><p>b</p>')).toBe('a\nb');
+    expect(htmlToText('x <b>y</b> <a href="u">z</a>')).toBe('x y z');
+  });
+
+  test('рейтинг: шкала 0–10, нулевой не показываем (CODE-33)', () => {
+    expect(ratingOf(100, 10)?.value).toBe(10);
+    expect(ratingOf(0, 10)).toBeUndefined();
+  });
+
+  test('resolveAirDate: несуществующая дата → undefined (CODE-18)', () => {
+    expect(resolveAirDate(31, 2, NOW)).toBeUndefined();
+    expect(resolveAirDate(0, 1, NOW)).toBeUndefined();
+    expect(resolveAirDate(15, 10, NOW)).toBe('2026-10-15');
   });
 });
