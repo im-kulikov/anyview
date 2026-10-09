@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { X } from 'lucide-react';
 import type { Episode, Title } from '../../api/contract';
 import { S } from '../../lib/strings';
@@ -15,6 +16,7 @@ interface Props {
 
 /** Панель «Список серий» внутри контейнера плеера: видна и в полноэкранном режиме (Fullscreen API: iPad, десктоп). */
 export function EpisodePanel({ title, episodes, currentId, onPick, onClose }: Props) {
+  const pick = useCallback((ep: Episode) => { onPick(ep); onClose(); }, [onPick, onClose]);
   return (
     <div className={styles.panel} role="dialog" aria-label={S.player.episodes} onPointerDown={(e) => e.stopPropagation()} onKeyDown={(e) => e.key === 'Escape' && onClose()}>
       <div className={styles.panelHead}>
@@ -24,7 +26,7 @@ export function EpisodePanel({ title, episodes, currentId, onPick, onClose }: Pr
         </button>
       </div>
       <div className={styles.panelList}>
-        <EpisodeList compact title={title} episodes={episodes} currentId={currentId} onPick={(ep) => { onPick(ep); onClose(); }} />
+        <EpisodeList compact title={title} episodes={episodes} currentId={currentId} onPick={pick} />
       </div>
     </div>
   );

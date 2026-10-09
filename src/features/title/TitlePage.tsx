@@ -29,12 +29,21 @@ function TitleView({ id }: { id: string }) {
   useDocumentTitle(titleQ.data?.name);
 
   if (titleQ.error instanceof ApiError && titleQ.error.kind === 'not_found') return <NotFoundPage />;
-  if (titleQ.isError) return <main><ErrorState onRetry={() => void titleQ.refetch()} /></main>;
+  if (titleQ.isError) return <ErrorPage onRetry={() => void titleQ.refetch()} />;
   if (!titleQ.data) return <TitleSkeleton />;
   if (epsQ.isError && !(epsQ.error instanceof ApiError && epsQ.error.kind === 'not_found')) {
-    return <main><ErrorState onRetry={() => void epsQ.refetch()} /></main>;
+    return <ErrorPage onRetry={() => void epsQ.refetch()} />;
   }
   return <TitleBody title={titleQ.data} episodes={epsQ.data?.flatMap((s) => s.episodes)} episodesPending={epsQ.isPending} />;
+}
+
+function ErrorPage({ onRetry }: { onRetry(): void }) {
+  return (
+    <main className={styles.errPage}>
+      <ErrorState onRetry={onRetry} />
+      <Link to="/anime" className={styles.errLink}>{S.title.toCatalog}</Link>
+    </main>
+  );
 }
 
 function TitleBody({ title, episodes, episodesPending }: { title: Title; episodes?: Episode[]; episodesPending: boolean }) {
@@ -55,6 +64,8 @@ function TitleBody({ title, episodes, episodesPending }: { title: Title; episode
   const select = useCallback((ep: Episode) => {
     setParams({ episode: ep.id }, { replace: true, preventScrollReset: true });
   }, [setParams]);
+
+  const pick = useCallback((ep: Episode) => playerRef.current?.play(ep), []);
 
   const fav = isFavorite(favorites, title.id);
   const p = current ? progress[current.id] : undefined;
@@ -123,12 +134,11 @@ function TitleBody({ title, episodes, episodesPending }: { title: Title; episode
               <button
                 type="button"
                 className={styles.fav}
-                aria-pressed={fav}
-                aria-label={fav ? S.title.unfavorite : S.title.favorite}
+                aria-label={fav ? S.title.favorited : S.title.favorite}
                 onClick={() => toggleFavorite(title)}
               >
                 <Heart size={20} fill={fav ? 'currentColor' : 'none'} aria-hidden="true" />
-                <span>{S.title.favorite}</span>
+                <span>{fav ? S.title.favorited : S.title.favorite}</span>
               </button>
             </div>
 
@@ -177,7 +187,7 @@ function TitleBody({ title, episodes, episodesPending }: { title: Title; episode
                 <span>{S.title.released(list.filter((e) => e.available).length, title.episodes?.total ? `${title.episodes.total}${title.episodes.totalIsEstimate ? '+' : ''}` : String(list.filter((e) => e.available).length))}</span>
               </div>
               <div className={styles.listBox}>
-                <EpisodeList title={title} episodes={list} currentId={current.id} onPick={(ep) => playerRef.current?.play(ep)} />
+                <EpisodeList title={title} episodes={list} currentId={current.id} onPick={pick} />
               </div>
             </aside>
           </>
