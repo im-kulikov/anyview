@@ -15,6 +15,12 @@
 .railCard {
   width: 128px;
 }
+/* Планшет: ширина карточки ленты близка к колонке сетки (minmax(128px, 1fr)), размеры не «скачут». */
+@media (min-width: 600px) {
+  .railCard {
+    width: 136px;
+  }
+}
 .continueCard {
   width: 232px;
 }

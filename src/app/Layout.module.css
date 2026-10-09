@@ -3,6 +3,8 @@
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
+  /* 100vw включает полосу прокрутки: вылет ленты за контейнер не должен давать горизонтальный скролл. */
+  overflow-x: clip;
 }
 /* Место под фиксированную нижнюю панель (высота ≈ 76 px + safe area). */
 .app[data-nav='on'] {

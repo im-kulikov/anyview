@@ -23,11 +23,14 @@
   display: none;
 }
 @media (min-width: 1024px) {
+  /* Лента выходит за контейнер до краёв окна: начало выровнено по контейнеру, хвост не обрезается резко. */
   .rail {
+    --bleed: calc(50vw - 50% + 4px);
     gap: 20px;
-    padding: 4px;
-    margin: -4px;
-    scroll-padding: 0 4px;
+    padding: 4px var(--bleed);
+    margin: -4px calc(-1 * var(--bleed));
+    /* Без snap: проценты в scroll-padding считаются от окна прокрутки, а не контейнера, и лента «залипала» бы со сдвигом. */
+    scroll-snap-type: none;
   }
 }
 @media (hover: hover) and (pointer: fine) {
