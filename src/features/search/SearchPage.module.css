@@ -1,0 +1,243 @@
+.main {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+.head {
+  display: flex;
+  flex-direction: column;
+}
+/* Телефон: заголовок только для скринридеров, виден «Найдено: N» / «Часто ищут». */
+.head h1 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.found {
+  order: 2;
+  margin: 16px var(--gutter) 4px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.scope {
+  display: flex;
+  gap: 8px;
+  padding: 0 var(--gutter) 12px;
+}
+.scope button {
+  position: relative;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 13px;
+  font-weight: 500;
+}
+.scope button::before {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
+}
+.scope .on {
+  border: none;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+.head > div:first-child {
+  display: contents;
+}
+.recent {
+  padding: 8px var(--gutter) 0;
+}
+.recent h2 {
+  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.chips {
+  display: flex;
+  flex-direction: column;
+}
+.chips button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 15px;
+  text-align: left;
+}
+.chips svg {
+  color: var(--text-3);
+}
+.inline {
+  display: none;
+}
+.results {
+  padding: 0 var(--gutter);
+}
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.thumb {
+  flex: none;
+  width: 52px;
+  border-radius: 10px;
+}
+.rowText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.rowText b {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 15px;
+  font-weight: 600;
+}
+.rowText > span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 13px;
+  color: var(--text-3);
+}
+.rowText .rowMeta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+}
+.grid {
+  display: none;
+}
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--text-3);
+}
+.empty p:first-of-type {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+.empty p:last-of-type {
+  font-size: 14px;
+}
+
+@media (min-width: 1024px) {
+  .main {
+    padding: 32px var(--gutter) 48px;
+    gap: 24px;
+  }
+  .head {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .head > div:first-child {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .head h1 {
+    position: static;
+    width: auto;
+    height: auto;
+    clip-path: none;
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+  .found {
+    order: 0;
+    margin: 0;
+    font-size: 15px;
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--text-meta);
+  }
+  .scope {
+    flex-wrap: wrap;
+    padding: 0;
+  }
+  .scope button {
+    height: 40px;
+    padding: 0 16px;
+    font-size: 14px;
+  }
+  .recent,
+  .results {
+    padding: 0;
+  }
+  .recent h2 {
+    display: none;
+  }
+  .chips {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+  .inline {
+    display: inline;
+    margin-right: 4px;
+    font-size: 14px;
+    color: var(--text-3);
+  }
+  .chips button {
+    height: 36px;
+    min-height: 36px;
+    padding: 0 14px;
+    gap: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: var(--radius-pill);
+    font-size: 14px;
+  }
+  .list {
+    display: none;
+  }
+  .grid {
+    display: block;
+  }
+  .grid > div {
+    padding: 0;
+  }
+  .empty {
+    padding: 64px 24px;
+  }
+}
