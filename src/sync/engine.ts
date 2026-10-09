@@ -3,7 +3,7 @@ import { report } from '../lib/report';
 import { syncConfig } from './config';
 import { classifyError, type ErrorKind } from './errors';
 import { mergeData, sameData } from './merge';
-import { canSyncOnVisible, createDebouncer, PUSH_DEBOUNCE_MS, retryDelay, RETRY_MAX_ATTEMPTS } from './schedule';
+import { canSyncOnVisible, createDebouncer, PUSH_DEBOUNCE_MS, PUSH_MAX_WAIT_MS, retryDelay, RETRY_MAX_ATTEMPTS } from './schedule';
 import type { CloudUser, Remote } from './firebase';
 
 /**
@@ -66,7 +66,7 @@ let retryTimer: ReturnType<typeof setTimeout> | undefined;
 let unsubLocal: (() => void) | undefined;
 let listening = false;
 
-const push = createDebouncer(() => void syncNow(), PUSH_DEBOUNCE_MS);
+const push = createDebouncer(() => void syncNow(), PUSH_DEBOUNCE_MS, undefined, PUSH_MAX_WAIT_MS);
 
 function fail(e: unknown) {
   const kind = classifyError(e);

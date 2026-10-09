@@ -41,3 +41,23 @@ test('дебаунс: последний вызов сдвигает срок, f
     vi.useRealTimers();
   }
 });
+
+test('дебаунс: при непрерывных вызовах (просмотр) срабатывает не позже maxMs', () => {
+  vi.useFakeTimers();
+  try {
+    const fn = vi.fn();
+    const d = createDebouncer(fn, 5000, undefined, 30000);
+    // позиция пишется каждые 4 с: обычный дебаунс не сработал бы никогда
+    for (let t = 0; t < 28000; t += 4000) {
+      d.call();
+      vi.advanceTimersByTime(4000);
+    }
+    expect(fn).not.toHaveBeenCalled();
+    d.call();
+    vi.advanceTimersByTime(2000);
+    expect(fn).toHaveBeenCalledTimes(1);
+    expect(d.pending).toBe(false);
+  } finally {
+    vi.useRealTimers();
+  }
+});
