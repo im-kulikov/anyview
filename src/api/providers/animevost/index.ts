@@ -6,8 +6,8 @@ import type { ContentProvider } from '../../provider';
 import { https } from '../../../lib/https';
 import { createClient, form } from './client';
 import {
-  backdropOf, episodeOf, formatOf, genresOf, htmlToText, parseTitle, posterOf, ratingOf,
-  sortPlaylist, statusOf, videoIdOf,
+  backdropOf, episodesOf, formatOf, genresOf, htmlToText, parseTitle, posterOf, ratingOf,
+  sortPlaylist, statusOf,
   type RawItem, type RawPlaylistItem,
 } from './parse';
 
@@ -17,6 +17,35 @@ interface ListResponse {
 }
 
 const MAX_PAGE = 40;
+/** Кэш адаптера живёт не дольше staleTime ленты: дальше свежесть решает TanStack Query. */
+export const CACHE_TTL_MS = 5 * 60_000;
+const CACHE_MAX = 500;
+
+/** Map с TTL и лимитом размера (вытесняется самая старая вставка). */
+class TtlCache<V> {
+  private m = new Map<string, { t: number; v: V }>();
+  get(key: string): V | undefined {
+    const e = this.m.get(key);
+    if (!e) return undefined;
+    if (Date.now() - e.t > CACHE_TTL_MS) {
+      this.m.delete(key);
+      return undefined;
+    }
+    return e.v;
+  }
+  set(key: string, v: V) {
+    this.m.delete(key);
+    this.m.set(key, { t: Date.now(), v });
+    if (this.m.size > CACHE_MAX) this.m.delete(this.m.keys().next().value as string);
+  }
+  delete(key: string) {
+    this.m.delete(key);
+  }
+}
+
+/** Элемент ленты пригоден для маппинга: иначе пропускаем его, а не роняем страницу. */
+const usable = (r: unknown): r is RawItem =>
+  typeof r === 'object' && r !== null && typeof (r as RawItem).title === 'string' && (r as RawItem).id != null;
 const rawIdOf = (id: string): string => {
   const m = /^av-(\d+)$/.exec(id);
   if (!m) throw new ApiError('not_found', 'Тайтл не найден');
@@ -70,18 +99,18 @@ export function toTitle(raw: RawItem, now = new Date()): Title {
 
 export function createAnimevostProvider(bases: string[]): ContentProvider {
   const client = createClient(bases);
-  const rawCache = new Map<string, RawItem>();
-  const rawLoads = new Map<string, Promise<RawItem>>();
-  const playlists = new Map<string, Promise<RawPlaylistItem[]>>();
+  const rawCache = new TtlCache<RawItem>();
+  const rawLoads = new TtlCache<Promise<RawItem>>();
+  const playlists = new TtlCache<Promise<RawPlaylistItem[]>>();
 
   const remember = (items: RawItem[]) => items.forEach((r) => rawCache.set(String(r.id), r));
 
-  const memo = <T>(map: Map<string, Promise<T>>, key: string, load: () => Promise<T>) => {
-    let p = map.get(key);
+  const memo = <T>(cache: TtlCache<Promise<T>>, key: string, load: () => Promise<T>) => {
+    let p = cache.get(key);
     if (!p) {
       p = load();
-      map.set(key, p);
-      p.catch(() => map.delete(key));
+      cache.set(key, p);
+      p.catch(() => cache.delete(key));
     }
     return p;
   };
@@ -92,7 +121,7 @@ export function createAnimevostProvider(bases: string[]): ContentProvider {
     return memo(rawLoads, rawId, async () => {
       const res = await client.request<ListResponse>('/info', form({ id: rawId }));
       const item = res.state?.status === 'ok' ? res.data?.[0] : undefined;
-      if (!item) throw new ApiError('not_found', 'Тайтл не найден');
+      if (!usable(item)) throw new ApiError('not_found', 'Тайтл не найден');
       remember([item]);
       return item;
     });
@@ -102,7 +131,7 @@ export function createAnimevostProvider(bases: string[]): ContentProvider {
     memo(playlists, rawId, async () => {
       const res = await client.request<unknown>('/playlist', form({ id: rawId }));
       if (!Array.isArray(res)) throw new ApiError('not_found', 'Тайтл не найден');
-      return sortPlaylist(res as RawPlaylistItem[]);
+      return sortPlaylist(res.filter((p): p is RawPlaylistItem => typeof p?.name === 'string'));
     });
 
   return {
@@ -122,15 +151,17 @@ export function createAnimevostProvider(bases: string[]): ContentProvider {
       if (res.state?.status !== 'ok' || !Array.isArray(res.data)) {
         return { items: [], page, pageSize: size, hasMore: false };
       }
-      remember(res.data);
-      const total = Number(res.state.count);
+      const data = res.data.filter(usable);
+      remember(data);
+      const count = Number(res.state.count);
+      const total = Number.isFinite(count) ? count : undefined;
       const now = new Date();
       return {
-        items: res.data.map((r) => toSummary(r, now)),
+        items: data.map((r) => toSummary(r, now)),
         page,
         pageSize: size,
-        total,
-        hasMore: page * size < total,
+        ...(total !== undefined && { total }),
+        hasMore: total !== undefined ? page * size < total : res.data.length >= size,
       };
     },
 
@@ -146,7 +177,7 @@ export function createAnimevostProvider(bases: string[]): ContentProvider {
       const rawId = rawIdOf(titleId);
       const [list, raw] = await Promise.all([loadPlaylist(rawId), loadRaw(rawId).catch(() => undefined)]);
       signal?.throwIfAborted();
-      const episodes: Episode[] = list.map((p, i) => episodeOf(rawId, titleId, p, i));
+      const episodes: Episode[] = episodesOf(rawId, titleId, list);
       const next = raw && parseTitle(raw.title).nextEpisode;
       if (next && !episodes.some((e) => e.number === next.number)) {
         episodes.push({
@@ -168,7 +199,7 @@ export function createAnimevostProvider(bases: string[]): ContentProvider {
       if (m[2].startsWith('next-')) return [];
       const list = await loadPlaylist(m[1]);
       signal?.throwIfAborted();
-      const item = list.find((p, i) => (videoIdOf(p) ?? `i${i}`) === m[2]);
+      const item = list[episodesOf(m[1], '', list).findIndex((e) => e.id === episodeId)];
       if (!item) throw new ApiError('not_found', 'Серия не найдена');
       const make = (url: string, label: string, height: number): Source => ({
         id: `${episodeId}-${height}`,
@@ -207,9 +238,10 @@ export function createAnimevostProvider(bases: string[]): ContentProvider {
         throw new ApiError('parse', 'Некорректный ответ API');
       }
       if (body.state?.status !== 'ok' || !Array.isArray(body.data)) return empty;
-      remember(body.data);
+      const data = body.data.filter(usable);
+      remember(data);
       const now = new Date();
-      const items = body.data.map((r) => toSummary(r, now));
+      const items = data.map((r) => toSummary(r, now));
       return { items, page: 1, pageSize: items.length, total: items.length, hasMore: false };
     },
   };

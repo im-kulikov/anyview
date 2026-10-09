@@ -45,6 +45,8 @@ export function resolveAirDate(day: number, month: number, now: Date): string | 
   const y = now.getFullYear();
   for (const year of [y, y + 1, y - 1]) {
     const t = Date.UTC(year, month - 1, day);
+    const d = new Date(t);
+    if (d.getUTCMonth() !== month - 1 || d.getUTCDate() !== day) return undefined; // 31 февраля и т. п.
     const base = Date.UTC(y, now.getMonth(), now.getDate());
     if (t >= base - 30 * DAY && t <= base + 335 * DAY) return `${year}-${pad(month)}-${pad(day)}`;
   }
@@ -112,15 +114,19 @@ const ENTITIES: Record<string, string> = {
   mdash: '—', ndash: '–', hellip: '…',
 };
 
+const codePoint = (cp: number, fallback: string) =>
+  Number.isInteger(cp) && cp > 0 && cp <= 0x10ffff && !(cp >= 0xd800 && cp <= 0xdfff) ? String.fromCodePoint(cp) : fallback;
+
 /** HTML описания → плоский текст без DOM. */
 export function htmlToText(html: string): string {
   return html
     .replace(/\r\n?/g, '\n')
     .replace(/<br\s*\/?>[ \t]*\n?/gi, '\n')
-    .replace(/<[^>]*>/g, '')
+    .replace(/<\/(?:p|div|li|h[1-6]|tr)\s*>/gi, '\n') // конец блока — перенос строки
+    .replace(/<\/?[a-z][^>]*>/gi, '') // «5 < 6 > 3» не тег
     .replace(/&(?:#(\d+)|#x([0-9a-f]+)|([a-z]+));/gi, (all, dec, hex, name) => {
-      if (dec) return String.fromCodePoint(Number(dec));
-      if (hex) return String.fromCodePoint(parseInt(hex, 16));
+      if (dec) return codePoint(Number(dec), all);
+      if (hex) return codePoint(parseInt(hex, 16), all);
       return ENTITIES[name.toLowerCase()] ?? all;
     })
     .replace(/\n{3,}/g, '\n\n')
@@ -132,7 +138,8 @@ export function ratingOf(rating: unknown, votes: unknown): Rating | undefined {
   const r = Number(rating);
   const v = Number(votes);
   if (!Number.isFinite(r) || !Number.isFinite(v) || v < 5) return undefined;
-  return { source: 'animevost', value: Math.round((r / v) * 2 * 10) / 10, votes: v };
+  const value = Math.min(10, Math.round((r / v) * 2 * 10) / 10);
+  return value > 0 ? { source: 'animevost', value, votes: v } : undefined;
 }
 
 export function genresOf(genre?: string): Tag[] {
@@ -171,6 +178,17 @@ export function sortPlaylist<T extends { name: string }>(items: T[]): T[] {
     .map((it, i) => ({ it, i, n: firstNumber(it.name) }))
     .sort((a, b) => (a.n ?? Infinity) - (b.n ?? Infinity) || a.i - b.i)
     .map((x) => x.it);
+}
+
+/** Серии плейлиста с уникальными id: повтор videoId получает суффикс -2, -3… (sources() ищет по тем же id). */
+export function episodesOf(rawId: string, titleId: string, list: RawPlaylistItem[]): Episode[] {
+  const seen = new Map<string, number>();
+  return list.map((p, i) => {
+    const e = episodeOf(rawId, titleId, p, i);
+    const n = (seen.get(e.id) ?? 0) + 1;
+    seen.set(e.id, n);
+    return n === 1 ? e : { ...e, id: `${e.id}-${n}` };
+  });
 }
 
 export function episodeOf(rawId: string, titleId: string, p: RawPlaylistItem, index: number): Episode {
