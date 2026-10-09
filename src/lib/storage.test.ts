@@ -6,7 +6,7 @@ vi.stubGlobal('localStorage', {
   setItem: (k: string, v: string) => void mem.set(k, v),
 });
 
-const { migrate, SCHEMA_VERSION, feedStore, getPrefs, DEFAULT_PREFS, saveProgress,historyStore, progressStore, toggleFavorite, favoritesStore, addRecentSearch, recentStore, resetProgress } = await import('./storage');
+const { migrate, SCHEMA_VERSION, feedStore, getPrefs, DEFAULT_PREFS, saveProgress,historyStore, progressStore, toggleFavorite, favoritesStore, addRecentSearch, recentStore, resetProgress, MIGRATIONS, batch, favoritesMetaStore, readLocal, writeLocal, subscribeLocal } = await import('./storage');
 
 const title = { id: 'av-1', type: 'anime', format: 'tv', name: 'T', status: 'ongoing' } as never;
 const ep = (n: number) => ({ id: `e${n}`, titleId: 'av-1', season: 1, number: n, name: `${n} серия`, available: true });
@@ -120,5 +120,64 @@ test('migrate: нет версии = v1, цепочка шагов, упавши
   const api2 = { getItem: (k: string) => kv2.get(k) ?? null, setItem: (k: string, v: string) => void kv2.set(k, v) };
   migrate(api2, { 1: () => { throw new Error('boom'); } }, 2);
   expect(kv2.get('anyview:schema')).toBe('1');
-  expect(SCHEMA_VERSION).toBe(1);
+  expect(SCHEMA_VERSION).toBe(2);
+});
+
+test('миграция 1 → 2: метки для уже добавленного избранного, порядок сохраняется, повтор безопасен', () => {
+  const kv = new Map<string, string>();
+  const api = { getItem: (k: string) => kv.get(k) ?? null, setItem: (k: string, v: string) => void kv.set(k, v) };
+  kv.set('anyview:v1:favorites', JSON.stringify([title, { ...(title as object), id: 'av-2' }, { broken: true }]));
+  expect(migrate(api, MIGRATIONS, 2)).toBe(2);
+  const meta = JSON.parse(kv.get('anyview:v1:favoritesMeta')!);
+  expect(meta).toEqual({ 'av-1': { at: 2 }, 'av-2': { at: 1 } });
+  kv.set('anyview:v1:favoritesMeta', '{"av-1":{"at":99}}');
+  MIGRATIONS[1](api);
+  expect(kv.get('anyview:v1:favoritesMeta')).toBe('{"av-1":{"at":99}}'); // не перезаписывает
+  const empty = new Map<string, string>();
+  expect(migrate({ getItem: (k) => empty.get(k) ?? null, setItem: (k, v) => void empty.set(k, v) }, MIGRATIONS, 2)).toBe(2);
+  expect(empty.has('anyview:v1:favoritesMeta')).toBe(false);
+});
+
+test('избранное хранит метки: добавление, «надгробие» при удалении', () => {
+  writeLocal({ progress: {}, history: [], favorites: [], favMeta: {} }); // предыдущие тесты могли оставить хранилище в режиме памяти
+  toggleFavorite(title);
+  expect(favoritesMetaStore.get()['av-1']).toMatchObject({ at: expect.any(Number) });
+  expect(favoritesMetaStore.get()['av-1'].del).toBeUndefined();
+  toggleFavorite(title);
+  expect(favoritesMetaStore.get()['av-1'].del).toBe(true);
+  toggleFavorite(title);
+  expect(favoritesMetaStore.get()['av-1'].del).toBeUndefined();
+});
+
+test('«С начала» обновляет updatedAt (иначе при слиянии проиграет старой записи)', () => {
+  saveProgress({ title, episode: ep(1), position: 30, duration: 100 });
+  const before = progressStore.get().e1.updatedAt;
+  vi.useFakeTimers();
+  try {
+    vi.setSystemTime(before + 5000);
+    resetProgress('e1');
+  } finally {
+    vi.useRealTimers();
+  }
+  expect(progressStore.get().e1).toMatchObject({ position: 0, updatedAt: before + 5000 });
+  expect(historyStore.get()[0].updatedAt).toBe(before + 5000);
+});
+
+test('batch: подписчики уведомляются один раз после всех записей; saveProgress и writeLocal атомарны', () => {
+  let calls = 0;
+  const off = subscribeLocal(() => calls++);
+  batch(() => {
+    progressStore.set({});
+    historyStore.set([]);
+    expect(calls).toBe(0);
+  });
+  expect(calls).toBe(1); // подписка одна на каждое хранилище, но один и тот же слушатель вызывается один раз
+  calls = 0;
+  saveProgress({ title, episode: ep(1), position: 10, duration: 100 });
+  expect(calls).toBe(1);
+  calls = 0;
+  writeLocal({ ...readLocal(), progress: {}, history: [], favorites: [], favMeta: {} });
+  expect(calls).toBe(1);
+  expect(readLocal()).toEqual({ progress: {}, history: [], favorites: [], favMeta: {} });
+  off();
 });
