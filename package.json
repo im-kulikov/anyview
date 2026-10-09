@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "budget": "node scripts/check-budget.mjs",
     "test": "vitest"
   },
   "dependencies": {

@@ -67,9 +67,10 @@ src/
     provider.ts            ← интерфейс ContentProvider
     hooks.ts               ← useUpdates, useTitle, useEpisodes, useSources, useSearch
     keys.ts                ← ключи запросов Query, STALE, FEED_PAGE_SIZE
+    feedCache.ts           ← снимок первой страницы ленты в localStorage (повторный визит, §8)
     index.ts               ← сборка провайдера: аниме → animevost, остальное → comingSoon
     providers/
-      animevost/  client.ts (fetch, перебор баз)  parse.ts (чистые функции)
+      animevost/  client.ts (fetch, перебор баз)  parse.ts (чистые функции)  urls.ts (базы, путь ленты — общие с vite.config)
                   index.ts (адаптер и маппинг toSummary/toTitle, кэш)  parse.test.ts  provider.test.ts
       comingSoon.ts        ← сериалы и фильмы: catalog() → coming_soon
   features/
@@ -83,7 +84,10 @@ src/
   styles/         tokens.css  global.css
 public/
   brand/          logo, favicon, иконки (см. ASSETS.md)
+  fonts/          Exo 2 (woff2: cyrillic, latin, latin-ext), свой хостинг
   manifest.webmanifest
+config/           htmlPlugin.ts: preconnect/preload и CSP в index.html из переменных окружения (+ тест)
+scripts/          check-budget.mjs: бюджет стартового JS в CI
 ```
 
 Отдельных компонентов `EmptyState` и `Chip` нет — разметка внутри `SearchPage` и `TitlePage`. При добавлении каталога или файла уровня модуля обновлять это дерево.
@@ -97,7 +101,8 @@ public/
 | `VITE_BASE` | `/anyview/` | `base` для GitHub Pages (имя репозитория) | да |
 | `VITE_ANIMEVOST_BASES` | `https://api.animetop.info/v1,https://api.animevost.org/v1` | список баз, пробуем по порядку | да |
 | `VITE_PROVIDER` | `animevost` | `animevost` или будущий `anyview`; неизвестное значение — ошибка при старте | частично: `anyview` — заготовка, все вызовы падают ошибкой «not implemented» |
-| `VITE_API_BASE` | — | база своего API (`anyview`) | нет, зарезервирована (фаза 2) |
+| `VITE_API_BASE` | — | база своего API (`anyview`) | частично: попадает в `connect-src` CSP и в текст ошибки заглушки |
+| `VITE_SITE_URL` | `https://im-kulikov.github.io` + `VITE_BASE` | абсолютный адрес сайта для `og:image` (читает только сборка) | да |
 
 Провайдер выбирается в `src/api/index.ts` (`createProvider`). Образец — `.env.example`.
 
@@ -260,6 +265,7 @@ public/
 | `anyview:v1:history` | `[{title: TitleSummary, episodeId, episodeName, still?: string, position, duration, updatedAt}]` — **одна запись на тайтл**, обновляется на месте и поднимается наверх | 50 |
 | `anyview:v1:favorites` | `TitleSummary[]` | 200 |
 | `anyview:v1:recentSearches` | `string[]` | 8 |
+| `anyview:v1:feed` | `{savedAt, items: TitleSummary[], total?, hasMore}` — снимок первой страницы ленты, не пользовательские данные (§8) | 1 страница (≤ 30) |
 | `anyview:v1:prefs` | `{quality: 'auto'\|'sd'\|'hd', autoNext: boolean, volume: number, muted: boolean}` | — |
 
 Правила «Продолжить просмотр»: когда серия досмотрена до ≥ 90 %, запись тайтла переходит на следующую доступную серию (позиция 0); следующей нет — запись удаляется. Снимок `TitleSummary` хранится целиком, чтобы «Продолжить просмотр» и «Избранное» рисовались без сети.
@@ -270,13 +276,16 @@ public/
 
 Что известно заранее: API animevost не сжимает ответы (страница из 30 тайтлов ≈ 105 КБ), постеры приходят одного размера (≈ 400 × 565, 155–180 КБ JPEG) со стороннего домена. Поэтому:
 
-- `<link rel="preconnect">` к `api.animetop.info`, `static.openni.ru` и Google Fonts.
-- `<link rel="preload" as="fetch">` первой страницы ленты в `index.html`. Хост первой базы и `quantity=30` записаны в нём жёстко: при смене `VITE_ANIMEVOST_BASES` или `FEED_PAGE_SIZE` (`src/api/keys.ts`) менять синхронно, иначе preload бесполезен (лишние ≈ 106 КБ). Что браузер переиспользует preload для `fetch()` из `client.ts`, не проверено.
+- `<link rel="preconnect">` к первой базе API и к хосту постеров и `<link rel="preload" as="fetch">` первой страницы ленты добавляет в `index.html` при сборке `config/htmlPlugin.ts`: база — первая из `VITE_ANIMEVOST_BASES`, путь и размер страницы — те же `lastPath`/`FEED_PAGE_SIZE`, что использует адаптер (тест сверяет). Для `VITE_PROVIDER=anyview` подсказок нет. Что браузер переиспользует preload для `fetch()` из `client.ts`, подтверждено замером: в сети один запрос `/last`.
+- Повторный визит: первая страница ленты (до 30 карточек ≈ 13 КБ) сохраняется в `anyview:v1:feed` и при старте кладётся в кэш Query как устаревшая (`api/feedCache.ts`): экран рисуется сразу, запрос к API идёт как обычно и заменяет данные. Снимок старше 7 суток не используется. Главная по-прежнему делает один сетевой запрос.
+- Шрифт Exo 2 раздаётся с того же хоста (`public/fonts`, `styles/fonts.css`, `font-display: swap`): без внешнего CSS, DNS и TLS до первого текста и без inline-обработчиков в `index.html`.
+- CSP через `<meta>` (только в сборке): `default-src 'none'`, скрипты и шрифты только свои, `connect-src` — origin баз API, картинки и видео — любой `https:`. Подробности — ADR-20.
 - Загрузка первой страницы ленты стартует в `main.tsx` до первого рендера (`queryClient.prefetchInfiniteQuery`).
 - Картинки карточек грузит `Cover`: свой `IntersectionObserver` (`rootMargin` 200 px), `<img>` не попадает в DOM, пока контейнер не подошёл к экрану (нативный `lazy` берёт запас ≈ 1250 px и забивает канал). `fetchpriority="high"` + `loading="eager"` — у одной первой обложки (на главной и в каталоге) и у постера тайтла, у остальных `fetchpriority="low"`. Кадры серий в `EpisodeList` — нативный `loading="lazy"`.
 - Под каждую картинку зарезервировано место (`aspect-ratio`).
 - Тайтл с плеером — отдельный чанк; стартовый JS ≤ 150 КБ gzip.
-- Шрифт: только нужные начертания (400, 500, 600, 700, 800), `display=swap`.
+- Шрифт: переменный Exo 2 400–800, подмножества cyrillic / latin / latin-ext с `unicode-range` (скачиваются только нужные), `display=swap`.
+- Стартовый JS проверяется в CI (`scripts/check-budget.mjs`, ≤ 150 КБ gzip).
 - Анимации — только `transform`/`opacity`. Скелетоны замирают при `prefers-reduced-motion`.
 - Нет CSS-in-JS-рантайма и UI-китов. Виртуализацию и `content-visibility` не добавлять, пока профилировщик не покажет проблему.
 
@@ -302,9 +311,9 @@ public/
 
 - Деплой в **GitHub Pages через GitHub Actions** (Settings → Pages → Source: GitHub Actions; если прав включить из CI не хватает — попросить владельца репозитория).
 - Workflow `.github/workflows/deploy.yml`: на `pull_request` — только проверки (шаг 1), без публикации; на `push` в `main` и вручную (`workflow_dispatch`) — полный цикл. Мерж с красным CI запрещён.
-  1. `npm ci` → `npm run lint` → `npm run typecheck` → `npm test -- --run` → `npm run build` (`build` = `tsc --noEmit && vite build`, типы проверяются дважды намеренно).
+  1. `npm ci` → `npm run lint` → `npm run typecheck` → `npm test -- --run` → `npm run build` (`build` = `tsc --noEmit && vite build`, типы проверяются дважды намеренно) → `node scripts/check-budget.mjs` (бюджет стартового JS).
   2. Прямые ссылки на SPA: скопировать `dist/index.html` в `dist/anime.html`, `series.html`, `movies.html`, `search.html` (Pages отдаёт `/anyview/anime` из `anime.html` с кодом 200) и в `dist/404.html` (для `/title/*` — открывается приложение, но с кодом 404; для MVP приемлемо). Работу `x.html` проверить на первом деплое.
-  3. `actions/upload-pages-artifact` → `actions/deploy-pages` (permissions `pages: write`, `id-token: write`).
+  3. `actions/upload-pages-artifact` → `actions/deploy-pages` (permissions `pages: write`, `id-token: write` только у job `deploy`) → `curl` на `/`, `/anime`, `/search`, манифест и шрифт: красный деплой, если что-то не отвечает.
 - Vite `base` = `VITE_BASE` (по умолчанию `/anyview/`). Роутер получает `basename` из `import.meta.env.BASE_URL`.
 - `public/manifest.webmanifest` Vite не переписывает: `start_url` и `scope` — `"./"`, пути иконок — относительные.
 - В README репозитория: адрес сайта, команды, переменные окружения, структура, известные ограничения.

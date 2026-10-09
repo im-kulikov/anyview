@@ -5,6 +5,7 @@ import {
 import type { ContentProvider } from '../../provider';
 import { https } from '../../../lib/https';
 import { createClient, form } from './client';
+import { lastPath, MAX_PAGE } from './urls';
 import {
   backdropOf, episodesOf, formatOf, genresOf, htmlToText, parseTitle, posterOf, ratingOf,
   sortPlaylist, statusOf,
@@ -16,7 +17,6 @@ interface ListResponse {
   data: RawItem[];
 }
 
-const MAX_PAGE = 40;
 /** Кэш адаптера живёт не дольше staleTime ленты: дальше свежесть решает TanStack Query. */
 export const CACHE_TTL_MS = 5 * 60_000;
 const CACHE_MAX = 500;
@@ -147,7 +147,7 @@ export function createAnimevostProvider(bases: string[]): ContentProvider {
 
     async updates({ page, pageSize, signal }): Promise<Page<TitleSummary>> {
       const size = Math.min(pageSize, MAX_PAGE);
-      const res = await client.request<ListResponse>(`/last?page=${page}&quantity=${size}`, { signal });
+      const res = await client.request<ListResponse>(lastPath(page, size), { signal });
       if (res.state?.status !== 'ok' || !Array.isArray(res.data)) {
         return { items: [], page, pageSize: size, hasMore: false };
       }

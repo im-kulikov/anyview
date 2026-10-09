@@ -114,6 +114,14 @@ export const progressStore = createStore<Record<string, ProgressEntry>>('progres
 export const historyStore = createStore<HistoryEntry[]>('history', [], listOf(isHistory));
 export const favoritesStore = createStore<TitleSummary[]>('favorites', [], listOf(isSummary));
 export const recentStore = createStore<string[]>('recentSearches', [], listOf(isStr));
+/** Первая страница ленты для мгновенного показа при повторном визите (api/feedCache.ts); всегда перепроверяется сетью. */
+export interface FeedSnapshot { savedAt: number; items: TitleSummary[]; total?: number; hasMore: boolean }
+const parseFeed = (v: unknown): FeedSnapshot | undefined => {
+  if (!isObj(v) || !isNum(v.savedAt) || !Array.isArray(v.items)) return undefined;
+  const items = v.items.filter(isSummary);
+  return items.length ? { savedAt: v.savedAt, items, ...(isNum(v.total) && { total: v.total }), hasMore: v.hasMore !== false } : undefined;
+};
+export const feedStore = createStore<FeedSnapshot | null>('feed', null, parseFeed);
 export const prefsStore = createStore<Prefs>('prefs', DEFAULT_PREFS, parsePrefs);
 
 export function useStore<T>(store: Store<T>): T {

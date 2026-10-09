@@ -1,17 +1,12 @@
 import { ApiError } from './contract';
 import type { ContentProvider } from './provider';
 import { createAnimevostProvider } from './providers/animevost';
+import { parseBases } from './providers/animevost/urls';
 import { comingSoonProvider } from './providers/comingSoon';
-
-const DEFAULT_BASES = 'https://api.animetop.info/v1,https://api.animevost.org/v1';
 
 /** Аниме — animevost, остальные типы — заглушка. */
 function createAnimevostRouter(rawBases: string | undefined): ContentProvider {
-  const bases = (rawBases || DEFAULT_BASES)
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-  const anime = createAnimevostProvider(bases);
+  const anime = createAnimevostProvider(parseBases(rawBases));
   return {
     catalog: () => anime.catalog(),
     updates: (p) => (p.type === 'anime' ? anime.updates(p) : comingSoonProvider.updates(p)),
