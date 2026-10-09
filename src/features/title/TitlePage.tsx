@@ -33,20 +33,21 @@ function TitleView({ id }: { id: string }) {
   if (epsQ.isError && !(epsQ.error instanceof ApiError && epsQ.error.kind === 'not_found')) {
     return <main><ErrorState onRetry={() => void epsQ.refetch()} /></main>;
   }
-  return <TitleBody title={titleQ.data} episodes={epsQ.data?.flatMap((s) => s.episodes)} />;
+  return <TitleBody title={titleQ.data} episodes={epsQ.data?.flatMap((s) => s.episodes)} episodesPending={epsQ.isPending} />;
 }
 
-function TitleBody({ title, episodes }: { title: Title; episodes?: Episode[] }) {
+function TitleBody({ title, episodes, episodesPending }: { title: Title; episodes?: Episode[]; episodesPending: boolean }) {
   const [params, setParams] = useSearchParams();
   const progress = useStore(progressStore);
   const favorites = useStore(favoritesStore);
   const playerRef = useRef<PlayerHandle>(null);
   const [source, setSource] = useState<Source | undefined>();
-  const [picked, setPicked] = useState<string | null>(null);
+  const [picked, setPicked] = useState<string | null | undefined>(undefined);
 
   const list = episodes ?? [];
   // Серия выбирается один раз, когда плейлист загрузился: дальнейшие записи прогресса её не меняют.
-  if (!picked && list.length) setPicked(pickEpisode(list, params.get('episode'), progress)?.id ?? null);
+  // null = выбор сделан, доступных серий нет (иначе рендер-фазовый setState зациклится).
+  if (picked === undefined && !episodesPending) setPicked(pickEpisode(list, params.get('episode'), progress)?.id ?? null);
   const urlEp = list.find((e) => e.id === params.get('episode') && e.available);
   const current = urlEp ?? list.find((e) => e.id === picked);
 
@@ -156,9 +157,11 @@ function TitleBody({ title, episodes }: { title: Title; episodes?: Episode[] }) 
       </section>
 
       <section id="player" className={styles.watch}>
-        {!episodes ? (
+        {episodesPending ? (
           <Skeleton className={styles.playerSkel} />
-        ) : !current ? null : (
+        ) : !current ? (
+          <p className={styles.empty}>{S.title.noEpisodes}</p>
+        ) : (
           <>
             <div className={styles.playerCol}>
               <div className={styles.watchHead}>
