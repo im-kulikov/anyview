@@ -20,7 +20,6 @@ export function BottomNav() {
           to={to}
           end={end}
           className={({ isActive }) => `${styles.item} ${isActive || (onTitle && to === '/anime') ? styles.active : ''}`}
-          aria-current={onTitle && to === '/anime' ? 'page' : undefined}
         >
           <span className={styles.pill}>
             <Icon size={20} aria-hidden="true" />

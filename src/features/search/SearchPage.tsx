@@ -16,7 +16,7 @@ import styles from './SearchPage.module.css';
 export function SearchPage() {
   const [params, setParams] = useSearchParams();
   const raw = params.get('q') ?? '';
-  const q = useDebouncedValue(raw.trim(), 300);
+  const q = useDebouncedValue(raw.trim(), 100);
   const active = q.length >= 2 && raw.trim().length >= 2;
   const search = useSearch(active ? q : '');
   const recent = useStore(recentStore);

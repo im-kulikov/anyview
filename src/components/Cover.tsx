@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import styles from './Cover.module.css';
 
 interface Props {
@@ -26,14 +26,17 @@ export function Cover({ src, name, ratio = '2 / 3', priority, className = '', ch
     return () => io.disconnect();
   }, [near]);
 
+  // Стабильный ref: иначе React вызывает его дважды на каждый рендер каждой карточки.
+  const imgRef = useCallback((el: HTMLImageElement | null) => {
+    if (el?.complete && el.naturalWidth > 0) setLoaded(true);
+  }, []);
+
   const showImg = src && !failed && near;
   return (
     <div ref={boxRef} className={`${styles.cover} ${className}`} style={{ aspectRatio: ratio }}>
       {showImg ? (
         <img
-          ref={(el) => {
-            if (el?.complete && el.naturalWidth > 0) setLoaded(true);
-          }}
+          ref={imgRef}
           src={src}
           alt=""
           className={`${styles.img} ${loaded ? styles.loaded : ''}`}
