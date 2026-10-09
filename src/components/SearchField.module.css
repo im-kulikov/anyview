@@ -30,7 +30,7 @@
 .input {
   flex: 1;
   min-width: 0;
-  height: 40px;
+  height: 44px;
   border: none;
   background: transparent;
   color: var(--text);

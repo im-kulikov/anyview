@@ -245,6 +245,8 @@
   .volume {
     display: block;
     width: 80px;
+    height: 44px;
+    margin: 0;
     accent-color: var(--accent);
   }
 }

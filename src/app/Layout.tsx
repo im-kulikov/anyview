@@ -1,6 +1,7 @@
 import { Outlet, ScrollRestoration, useLocation } from 'react-router';
 import { Header } from '../components/Header';
 import { DesktopHeader } from '../components/DesktopHeader';
+import { OfflineBanner } from '../components/OfflineBanner';
 import { Footer } from '../components/Footer';
 import { BottomNav } from '../components/BottomNav';
 import { useIsDesktop } from '../lib/useMediaQuery';
@@ -15,6 +16,7 @@ export function Layout() {
       {isDesktop ? <DesktopHeader /> : <Header />}
       <Outlet />
       <Footer />
+      <OfflineBanner />
       {showNav && <BottomNav />}
       <ScrollRestoration />
     </div>

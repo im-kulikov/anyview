@@ -1,5 +1,6 @@
 import { createBrowserRouter } from 'react-router';
 import { Layout } from './Layout';
+import { RouteError } from './ErrorBoundary';
 import { SearchPage } from '../features/search/SearchPage';
 import { HomePage } from '../features/home/HomePage';
 import { CatalogPage } from '../features/catalog/CatalogPage';
@@ -11,6 +12,7 @@ export const router = createBrowserRouter(
     {
       element: <Layout />,
       HydrateFallback: () => null,
+      errorElement: <RouteError />,
       children: [
         { path: '/', element: <HomePage /> },
         { path: '/anime', element: <CatalogPage /> },
