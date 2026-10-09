@@ -73,7 +73,7 @@ export const S = {
     fullscreen: 'Во весь экран', exitFullscreen: 'Выйти из полноэкранного режима', seek: 'Перемотка',
     resume: (t: string) => `Продолжаем с ${t}`, fromStart: 'С начала',
     nextIn: (n: number) => `Следующая серия через ${n}…`, cancel: 'Отмена',
-    failed: 'Не удалось загрузить видео',
+    failed: 'Не удалось загрузить видео', loading: 'Загрузка видео',
     watched: 'Просмотрено', left: (m: number) => `Осталось ${m} мин`, isNew: 'Новая', playing: 'Играет',
     soon: 'Скоро', airs: (d: string) => `Выйдет ${d}`,
   },

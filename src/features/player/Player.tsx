@@ -51,6 +51,8 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player({ title, e
   const pendingSeek = useRef(0);
   const lastSave = useRef(0);
   const triedAlt = useRef(false);
+  const req = useRef(0); // номер последнего запроса запуска серии: поздний ответ сети не перебивает новый выбор
+  const pointerType = useRef('');
   const hideTimer = useRef<number>(undefined);
   const latest = useRef({ title, episodes, current });
   useEffect(() => {
@@ -69,14 +71,15 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player({ title, e
   const [isFs, setIsFs] = useState(false);
   const [source, setSource] = useState<Source | undefined>();
   const [panel, setPanel] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const next = nextEpisode(episodes, current.id);
   const prev = prevEpisode(episodes, current.id);
   const srcQ = useSources(current.id);
   useSources(next?.id); // следующая серия подгружается заранее (SPEC §5.4)
 
-  const persist = useCallback((force = false) => {
-    const v = videoRef.current;
+  const persist = useCallback((force = false, el: VideoEl | null = videoRef.current) => {
+    const v = el;
     const id = loadedEp.current;
     if (!v || !id || !v.duration || v.currentTime === 0) return;
     const now = Date.now();
@@ -91,7 +94,8 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player({ title, e
     setUiVisible(true);
     window.clearTimeout(hideTimer.current);
     hideTimer.current = window.setTimeout(() => {
-      if (videoRef.current && !videoRef.current.paused) setUiVisible(false);
+      // Контролы не прячем, пока на них клавиатурный фокус (SPEC §9).
+      if (videoRef.current && !videoRef.current.paused && !wrapRef.current?.querySelector(':focus-visible')) setUiVisible(false);
     }, HIDE_MS);
   }, []);
 
@@ -99,6 +103,7 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player({ title, e
     const v = videoRef.current;
     if (!v || !s.stream) return;
     persist(true);
+    req.current++;
     pendingSeek.current = seek;
     loadedEp.current = ep.id;
     loadedSource.current = s;
@@ -108,6 +113,7 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player({ title, e
     setStarted(true);
     setFailed(false);
     setCountdown(null);
+    setLoading(true);
     v.src = s.stream.url;
     if (autoplay) v.play().catch(() => setPlaying(false));
   }, [persist, onSourceChange]);
@@ -115,6 +121,7 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player({ title, e
   const playEpisode = useCallback((ep: Episode) => {
     if (!ep.available) return;
     const seek = savedPos(ep);
+    const my = ++req.current;
     onSelect(ep);
     const cached = qc.getQueryData<Source[]>(keys.sources(ep.id));
     const go = (list: Source[]) => {
@@ -124,7 +131,7 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player({ title, e
     };
     // Синхронный путь — источники уже загружены; иначе ждём сеть (на iOS элемент к этому моменту уже «разблокирован»).
     if (cached) go(cached);
-    else qc.fetchQuery({ queryKey: keys.sources(ep.id), queryFn: ({ signal }) => provider.sources(ep.id, signal), staleTime: STALE.item }).then(go, () => setFailed(true));
+    else qc.fetchQuery({ queryKey: keys.sources(ep.id), queryFn: ({ signal }) => provider.sources(ep.id, signal), staleTime: STALE.item }).then((list) => { if (my === req.current) go(list); }, () => { if (my === req.current) setFailed(true); });
   }, [qc, onSelect, loadSource]);
 
   useImperativeHandle(ref, () => ({ play: playEpisode, current: () => loadedSource.current }), [playEpisode]);
@@ -134,6 +141,7 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player({ title, e
     const v = videoRef.current;
     if (v && loadedEp.current && loadedEp.current !== current.id) {
       persist(true);
+      req.current++;
       v.pause();
       v.removeAttribute('src');
       v.load();
@@ -144,6 +152,11 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player({ title, e
       setSource(undefined);
       onSourceChange(undefined);
       setTime(0);
+      setDuration(0);
+      setBuffered(0);
+      setFailed(false);
+      setCountdown(null);
+      setLoading(false);
     }
   }, [current.id, persist, onSourceChange]);
 
@@ -158,14 +171,20 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player({ title, e
 
   // Сохранение позиции при уходе на другую вкладку и со страницы.
   useEffect(() => {
+    const v = videoRef.current; // в cleanup ref уже null: элемент запоминаем заранее
     const onHide = () => document.visibilityState === 'hidden' && persist(true);
     document.addEventListener('visibilitychange', onHide);
-    const onFs = () => setIsFs(!!document.fullscreenElement);
+    const onPageHide = () => persist(true);
+    window.addEventListener('pagehide', onPageHide);
+    const onFs = () => setIsFs(!!(document.fullscreenElement || (document as Document & { webkitFullscreenElement?: Element }).webkitFullscreenElement));
     document.addEventListener('fullscreenchange', onFs);
+    document.addEventListener('webkitfullscreenchange', onFs);
     return () => {
       document.removeEventListener('visibilitychange', onHide);
+      window.removeEventListener('pagehide', onPageHide);
       document.removeEventListener('fullscreenchange', onFs);
-      persist(true);
+      document.removeEventListener('webkitfullscreenchange', onFs);
+      persist(true, v);
       window.clearTimeout(hideTimer.current);
     };
   }, [persist]);
@@ -182,13 +201,18 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player({ title, e
     return () => window.clearTimeout(t);
   }, [countdown, next, playEpisode]);
 
-  const togglePlay = useCallback(() => {
+  const startPlay = useCallback(() => {
     const v = videoRef.current;
     if (!v) return;
     if (!loadedEp.current) playEpisode(latest.current.current);
-    else if (v.paused) v.play().catch(() => setPlaying(false));
-    else v.pause();
+    else v.play().catch(() => setPlaying(false));
   }, [playEpisode]);
+
+  const togglePlay = useCallback(() => {
+    const v = videoRef.current;
+    if (v && loadedEp.current && !v.paused) v.pause();
+    else startPlay();
+  }, [startPlay]);
 
   const seekBy = useCallback((d: number) => {
     const v = videoRef.current;
@@ -216,6 +240,9 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player({ title, e
       if (t?.closest('input, textarea, select, [contenteditable="true"]')) return;
       const interactive = !!t?.closest('button, a, [role="slider"]');
       const v = videoRef.current;
+      // Клавиши плеера — только при фокусе внутри него или пока играет видео: иначе пробел и стрелки прокручивают страницу.
+      const inPlayer = !!t && !!wrapRef.current?.contains(t);
+      if (!inPlayer && !(v && !v.paused && (t === document.body || !t))) return;
       const key = e.key.toLowerCase();
       if (key === 'n' && e.shiftKey) return goNext();
       if (e.shiftKey) return;
@@ -235,8 +262,12 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player({ title, e
     return () => document.removeEventListener('keydown', onKey);
   }, [togglePlay, seekBy, toggleFullscreen, goNext, bump]);
 
-  useMediaSession({ title, episode: current, hasNext: !!next, onPlay: () => void videoRef.current?.play(), onPause: () => videoRef.current?.pause(), onNext: goNext,
-    onPrev: () => { const q = prevEpisode(latest.current.episodes, latest.current.current.id); if (q) playEpisode(q); } });
+  const goPrev = useCallback(() => {
+    const q = prevEpisode(latest.current.episodes, latest.current.current.id);
+    if (q) playEpisode(q);
+  }, [playEpisode]);
+  const pauseVideo = useCallback(() => videoRef.current?.pause(), []);
+  useMediaSession({ title, episode: current, hasNext: !!next, onPlay: startPlay, onPause: pauseVideo, onNext: goNext, onPrev: goPrev });
 
   const onError = () => {
     const ep = episodes.find((e) => e.id === loadedEp.current);
@@ -250,6 +281,7 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player({ title, e
     } else {
       setFailed(true);
       setPlaying(false);
+      setLoading(false);
     }
   };
 
@@ -272,7 +304,7 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player({ title, e
   const shownTime = scrub !== null ? scrub * duration : time;
   const p = progress[current.id];
   const savedHere = !started && p && p.position > 5 && !isWatched(p) ? p.position : 0;
-  const showBig = !playing && !failed && countdown === null;
+  const showBig = !playing && !failed && countdown === null && !loading;
   const controlsHidden = playing && !uiVisible && scrub === null;
   const pipOk = typeof document !== 'undefined' && document.pictureInPictureEnabled;
   const qualities = srcQ.data?.filter((s) => s.stream) ?? [];
@@ -288,7 +320,9 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player({ title, e
         ref={wrapRef}
         className={`${styles.player} ${controlsHidden ? styles.idle : ''}`}
         onPointerMove={bump}
-        onPointerDown={(e) => { if (e.pointerType === 'touch') bump(); }}
+        onPointerDown={(e) => { pointerType.current = e.pointerType; if (e.pointerType === 'touch') bump(); }}
+        onFocusCapture={bump}
+        onKeyDown={bump}
       >
         <video
           ref={videoRef}
@@ -296,13 +330,16 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player({ title, e
           playsInline
           preload="none"
           poster={current.preview?.url}
-          onClick={(e) => {
+          onClick={() => {
             // На тач-экране первое касание показывает контролы, второе — пауза.
-            if ((e.nativeEvent as PointerEvent).pointerType === 'touch' && controlsHidden) bump();
+            if (pointerType.current === 'touch' && controlsHidden) bump();
             else togglePlay();
           }}
           onPlay={() => { setPlaying(true); bump(); }}
-          onPause={() => { setPlaying(false); setUiVisible(true); persist(true); }}
+          onPlaying={() => setLoading(false)}
+          onCanPlay={() => setLoading(false)}
+          onWaiting={() => setLoading(true)}
+          onPause={() => { setPlaying(false); setLoading(false); setUiVisible(true); persist(true); }}
           onTimeUpdate={(e) => { setTime(e.currentTarget.currentTime); persist(); }}
           onLoadedMetadata={(e) => {
             const v = e.currentTarget;
@@ -316,9 +353,10 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player({ title, e
           onEnded={() => {
             persist(true);
             setPlaying(false);
+            setLoading(false);
             if (!next || !prefs.autoNext) return;
             const v = videoRef.current;
-            if (document.fullscreenElement || v?.webkitDisplayingFullscreen) playEpisode(next); // в нативном полном экране оверлеев нет
+            if (v?.webkitDisplayingFullscreen) playEpisode(next); // нативный полный экран iPhone: оверлеев нет
             else setCountdown(5);
           }}
         />
@@ -334,6 +372,10 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player({ title, e
           <button type="button" className={styles.big} aria-label={S.player.play} onClick={togglePlay}>
             <Play size={28} fill="currentColor" aria-hidden="true" />
           </button>
+        )}
+
+        {loading && !failed && countdown === null && (
+          <div className={styles.spinner} role="status" aria-label={S.player.loading} />
         )}
 
         {failed && (
@@ -403,7 +445,7 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player({ title, e
               value={prefs.muted ? 0 : prefs.volume}
               onChange={(e) => setPrefs({ volume: Number(e.target.value), muted: false })}
             />
-            <span className={styles.time}>{formatTime(shownTime)} / {formatTime(duration)}</span>
+            <span className={styles.time}>{formatTime(shownTime)} / {duration ? formatTime(duration) : '--:--'}</span>
             <span className={styles.spacer} />
             {source && <span className={styles.quality}>{source.quality.label}</span>}
             <button type="button" className={styles.btn} aria-label={S.player.episodes} aria-expanded={panel} onClick={() => setPanel((v) => !v)}>
