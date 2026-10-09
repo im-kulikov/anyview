@@ -138,16 +138,101 @@ describe('поиск', () => {
     expect(f).toHaveBeenCalledTimes(1);
   });
 
-  test('TypeError после успешного ответа базы → пустая страница', async () => {
-    let n = 0;
-    vi.stubGlobal('fetch', vi.fn(() => (n++ === 0 ? json({ state: { status: 'ok', count: 0 }, data: [] }) : Promise.reject(new TypeError('cors')))));
-    const p = createAnimevostProvider([BASE]);
-    await p.updates({ type: 'anime', page: 1, pageSize: 30 });
-    expect((await p.search({ q: 'zzzz', page: 1, pageSize: 50 })).items).toEqual([]);
+  test('поиск без CORS-404 (TypeError), но контрольный запрос отвечает → пусто, даже на холодном старте', async () => {
+    const f = vi.fn((url: string) =>
+      url.endsWith('/search') ? Promise.reject(new TypeError('cors')) : json({ state: { status: 'ok', count: 1 }, data: [item(1, 'А / A [1 из 12+]')] }),
+    );
+    vi.stubGlobal('fetch', f);
+    const page = await createAnimevostProvider([BASE]).search({ q: 'zzzz', page: 1, pageSize: 50 });
+    expect(page.items).toEqual([]);
+    expect(f).toHaveBeenLastCalledWith(`${BASE}/last?page=1&quantity=1`, expect.anything());
   });
 
-  test('TypeError без успешных ответов → network', async () => {
+  test('TypeError и контрольный запрос тоже падает → network', async () => {
     vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new TypeError('offline'))));
     await expect(createAnimevostProvider([BASE]).search({ q: 'zzzz', page: 1, pageSize: 50 })).rejects.toMatchObject({ kind: 'network' });
+  });
+
+  test('контрольный запрос с 5xx → network', async () => {
+    vi.stubGlobal('fetch', vi.fn((url: string) => (url.endsWith('/search') ? Promise.reject(new TypeError('x')) : json({}, 502))));
+    await expect(createAnimevostProvider([BASE]).search({ q: 'zzzz', page: 1, pageSize: 50 })).rejects.toMatchObject({ kind: 'network' });
+  });
+});
+
+describe('отмена общих запросов (CODE-17)', () => {
+  /** fetch, который висит до abort и запоминает сигнал. */
+  const hanging = () => {
+    const signals: AbortSignal[] = [];
+    const f = vi.fn((_url: string, init?: RequestInit) => {
+      signals.push(init!.signal!);
+      return new Promise<Response>((_, reject) => init!.signal!.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError'))));
+    });
+    vi.stubGlobal('fetch', f);
+    return { f, signals };
+  };
+
+  test('один из двух подписчиков ушёл — запрос живёт; ушли оба — fetch оборван', async () => {
+    const { f, signals } = hanging();
+    const p = createAnimevostProvider([BASE]);
+    const a = new AbortController();
+    const b = new AbortController();
+    const pa = p.title('av-5', a.signal);
+    const pb = p.title('av-5', b.signal);
+    pa.catch(() => {});
+    pb.catch(() => {});
+    expect(f).toHaveBeenCalledTimes(1);
+    a.abort();
+    await expect(pa).rejects.toMatchObject({ name: 'AbortError' });
+    expect(signals[0].aborted).toBe(false);
+    b.abort();
+    await expect(pb).rejects.toMatchObject({ name: 'AbortError' });
+    expect(signals[0].aborted).toBe(true);
+  });
+
+  test('после полной отмены следующий вызов делает новый запрос', async () => {
+    const { f } = hanging();
+    const p = createAnimevostProvider([BASE]);
+    const a = new AbortController();
+    const first = p.episodes('av-6', a.signal);
+    first.catch(() => {});
+    a.abort();
+    await expect(first).rejects.toMatchObject({ name: 'AbortError' });
+    f.mockClear();
+    void p.episodes('av-6', new AbortController().signal).catch(() => {});
+    expect(f).toHaveBeenCalled();
+  });
+
+  test('отмена после завершения загрузки не стирает кэш', async () => {
+    const f = vi.fn(() => json([{ name: '1 серия', std: 'http://v/111.mp4' }]));
+    vi.stubGlobal('fetch', f);
+    const p = createAnimevostProvider([BASE]);
+    const a = new AbortController();
+    await p.sources('av-9-111', a.signal);
+    a.abort();
+    await p.sources('av-9-111');
+    expect(f).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('данные с чужих адресов', () => {
+  test('/last с fail на первой странице — ошибка, не «конец ленты»', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => json({ state: { status: 'fail' }, data: [] })));
+    await expect(createAnimevostProvider([BASE]).updates({ type: 'anime', page: 1, pageSize: 30 })).rejects.toMatchObject({ kind: 'network' });
+  });
+
+  test('относительный постер → https хоста постеров, чужая схема → без постера', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => json({ state: { status: 'ok', count: 2 }, data: [
+      { ...item(1, 'А / A [1 из 12+]'), urlImagePreview: '/uploads/a.jpg' },
+      { ...item(2, 'Б / B [1 из 12+]'), urlImagePreview: 'javascript:alert(1)' },
+    ] })));
+    const page = await createAnimevostProvider([BASE]).updates({ type: 'anime', page: 1, pageSize: 30 });
+    expect(page.items[0].poster).toEqual({ url: 'https://static.openni.ru/uploads/a.jpg' });
+    expect(page.items[1].poster).toBeUndefined();
+  });
+
+  test('источник с негодным адресом пропускается', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => json([{ name: '1 серия', std: 'javascript:1', hd: 'http://v/720/111.mp4' }])));
+    const src = await createAnimevostProvider([BASE]).sources('av-9-111');
+    expect(src.map((x) => x.stream)).toEqual([{ kind: 'file', url: 'https://v/720/111.mp4', mime: 'video/mp4' }]);
   });
 });
