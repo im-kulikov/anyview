@@ -113,7 +113,7 @@ function TitleBody({ title, episodes, episodesPending }: { title: Title; episode
                 onClick={() => {
                   if (!current) return;
                   playerRef.current?.play(current); // синхронно: iOS разрешает play() только в обработчике касания
-                  document.getElementById('player')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  document.getElementById('player')?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
                 }}
               >
                 <Play size={20} fill="currentColor" aria-hidden="true" />
