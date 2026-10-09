@@ -1,0 +1,25 @@
+.main {
+  min-height: 60vh;
+}
+.content {
+  max-width: 520px;
+  text-align: center;
+}
+.icon {
+  align-self: center;
+  color: var(--text-3);
+}
+/* Телефон: кнопки на всю ширину, как на «Скоро»; десктоп: в ряд по центру. */
+@media (min-width: 1024px) {
+  .main {
+    justify-content: center;
+    padding-top: 72px;
+  }
+  .content {
+    flex: 0 1 520px;
+    align-items: center;
+  }
+  .actions {
+    justify-content: center;
+  }
+}
