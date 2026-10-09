@@ -1,17 +1,11 @@
-import { Link } from 'react-router';
+import { useDocumentTitle } from '../lib/useDocumentTitle';
 
+/** Временная страница до реализации экрана своего этапа. */
 export function Stub({ name }: { name: string }) {
+  useDocumentTitle(name);
   return (
-    <main style={{ padding: 16 }}>
+    <main style={{ padding: 'var(--gutter)' }}>
       <h1>{name}</h1>
-      <nav style={{ display: 'flex', gap: 12 }}>
-        <Link to="/">Главная</Link>
-        <Link to="/anime">Аниме</Link>
-        <Link to="/series">Сериалы</Link>
-        <Link to="/movies">Фильмы</Link>
-        <Link to="/title/av-1">Тайтл</Link>
-        <Link to="/search">Поиск</Link>
-      </nav>
     </main>
   );
 }

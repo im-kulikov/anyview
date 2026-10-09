@@ -1,0 +1,80 @@
+.field {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  padding: 0 6px 0 16px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-3);
+  color: var(--text-3);
+}
+.field:focus-within {
+  outline: 2px solid var(--accent);
+}
+.active {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+.icon {
+  flex: none;
+}
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.input {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 15px;
+  outline: none;
+  appearance: none;
+}
+.input::placeholder {
+  color: var(--text-3);
+}
+.input::-webkit-search-cancel-button {
+  display: none;
+}
+/* Визуально 32 px, зона нажатия 44 px. */
+.clear {
+  flex: none;
+  position: relative;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: none;
+  background: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.clear span {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-7);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.kbd {
+  margin-right: 10px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border-strong);
+  font: inherit;
+  font-size: 12px;
+}
+.input:focus-visible {
+  outline: none;
+}
