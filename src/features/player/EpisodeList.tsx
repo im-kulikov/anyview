@@ -14,7 +14,9 @@ function sub(ep: Episode, title: Title, p?: { position: number; duration: number
   return '';
 }
 
-export function EpisodeList({ title, episodes, currentId, onPick }: {
+export function EpisodeList({ title, episodes, currentId, onPick, compact }: {
+  /** Тесная версия для панели внутри плеера (строки ниже, кадр меньше). */
+  compact?: boolean;
   title: Title;
   episodes: Episode[];
   currentId: string;
@@ -31,7 +33,7 @@ export function EpisodeList({ title, episodes, currentId, onPick }: {
   }, [currentId]);
 
   return (
-    <ol ref={listRef} className={styles.list}>
+    <ol ref={listRef} className={`${styles.list} ${compact ? styles.compact : ''}`}>
       {episodes.map((ep) => {
         const p = progress[ep.id];
         const text = sub(ep, title, p);

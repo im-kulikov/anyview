@@ -68,6 +68,7 @@ export const S = {
   player: {
     play: 'Воспроизвести', pause: 'Пауза', next: 'Следующая серия', prev: 'Предыдущая серия', quality: 'Качество видео',
     mute: 'Выключить звук', unmute: 'Включить звук', volume: 'Громкость', pip: 'Картинка в картинке',
+    episodes: 'Список серий', closePanel: 'Закрыть список',
     fullscreen: 'Во весь экран', exitFullscreen: 'Выйти из полноэкранного режима', seek: 'Перемотка',
     resume: (t: string) => `Продолжаем с ${t}`, fromStart: 'С начала',
     nextIn: (n: number) => `Следующая серия через ${n}…`, cancel: 'Отмена',

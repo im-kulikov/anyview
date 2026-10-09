@@ -1,6 +1,6 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Maximize, Minimize, Pause, PictureInPicture2, Play, SkipBack, SkipForward, Volume1, Volume2, VolumeX } from 'lucide-react';
+import { ListVideo, Maximize, Minimize, Pause, PictureInPicture2, Play, SkipBack, SkipForward, Volume1, Volume2, VolumeX, X } from 'lucide-react';
 import type { Episode, Source, Title } from '../../api/contract';
 import { useSources } from '../../api/hooks';
 import { keys, STALE } from '../../api/keys';
@@ -8,6 +8,7 @@ import { provider } from '../../api/index';
 import { S } from '../../lib/strings';
 import { formatTime } from '../../lib/format';
 import { getPrefs, isWatched, progressStore, resetProgress, saveProgress, setPrefs, useStore, usePrefs } from '../../lib/storage';
+import { EpisodeList } from './EpisodeList';
 import { nextEpisode, prevEpisode } from './pickEpisode';
 import { chooseSource } from './chooseSource';
 import { useMediaSession } from './useMediaSession';
@@ -67,6 +68,7 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player({ title, e
   const [countdown, setCountdown] = useState<number | null>(null);
   const [isFs, setIsFs] = useState(false);
   const [source, setSource] = useState<Source | undefined>();
+  const [panel, setPanel] = useState(false);
 
   const next = nextEpisode(episodes, current.id);
   const prev = prevEpisode(episodes, current.id);
@@ -375,6 +377,11 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player({ title, e
             </div>
           </div>
           <div className={styles.row}>
+            {prev && (
+              <button type="button" className={styles.btn} aria-label={S.player.prev} onClick={() => playEpisode(prev)}>
+                <SkipBack size={20} fill="currentColor" aria-hidden="true" />
+              </button>
+            )}
             <button type="button" className={styles.btn} aria-label={playing ? S.player.pause : S.player.play} onClick={togglePlay}>
               {playing ? <Pause size={22} fill="currentColor" aria-hidden="true" /> : <Play size={22} fill="currentColor" aria-hidden="true" />}
             </button>
@@ -399,8 +406,11 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player({ title, e
             <span className={styles.time}>{formatTime(shownTime)} / {formatTime(duration)}</span>
             <span className={styles.spacer} />
             {source && <span className={styles.quality}>{source.quality.label}</span>}
+            <button type="button" className={styles.btn} aria-label={S.player.episodes} aria-expanded={panel} onClick={() => setPanel((v) => !v)}>
+              <ListVideo size={20} aria-hidden="true" />
+            </button>
             {pipOk && (
-              <button type="button" className={styles.btn} aria-label={S.player.pip} onClick={() => void (document.pictureInPictureElement ? document.exitPictureInPicture() : videoRef.current?.requestPictureInPicture())}>
+              <button type="button" className={`${styles.btn} ${styles.pip}`} aria-label={S.player.pip} onClick={() => void (document.pictureInPictureElement ? document.exitPictureInPicture() : videoRef.current?.requestPictureInPicture())}>
                 <PictureInPicture2 size={20} aria-hidden="true" />
               </button>
             )}
@@ -409,6 +419,22 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player({ title, e
             </button>
           </div>
         </div>
+
+        {panel && (
+          // Панель внутри контейнера плеера: видна и в полноэкранном режиме (Fullscreen API: iPad, десктоп).
+          <div className={styles.panel} role="dialog" aria-label={S.player.episodes} onPointerDown={(e) => e.stopPropagation()} onKeyDown={(e) => e.key === 'Escape' && setPanel(false)}>
+            <div className={styles.panelHead}>
+              <b>{S.player.episodes}</b>
+              <button type="button" className={styles.btn} aria-label={S.player.closePanel} autoFocus onClick={() => setPanel(false)}>
+                <X size={20} aria-hidden="true" />
+              </button>
+            </div>
+            <div className={styles.panelList}>
+              {/* playEpisode вызывается синхронно из клика: iOS разрешает play() только в обработчике касания */}
+              <EpisodeList compact title={title} episodes={episodes} currentId={current.id} onPick={(ep) => { playEpisode(ep); setPanel(false); }} />
+            </div>
+          </div>
+        )}
       </div>
 
       <div className={styles.under}>
