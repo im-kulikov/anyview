@@ -17,4 +17,5 @@ export const comingSoonProvider: ContentProvider = {
   title: notFound,
   episodes: notFound,
   sources: notFound,
+  related: async () => ({ seasons: [], similar: [] }),
 };

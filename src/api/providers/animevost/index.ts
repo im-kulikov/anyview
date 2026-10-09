@@ -1,11 +1,12 @@
 import {
   ApiError,
-  type CatalogInfo, type Episode, type Page, type Season, type Source, type Title, type TitleSummary,
+  type CatalogInfo, type Episode, type Page, type RelatedTitles, type Season, type Source, type Title, type TitleSummary,
 } from '../../contract';
 import type { ContentProvider } from '../../provider';
 import { https } from '../../../lib/https';
 import { createClient, form } from './client';
 import { lastPath, MAX_PAGE } from './urls';
+import { classifyRelated, normTitle, relatedQuery } from './related';
 import {
   backdropOf, episodesOf, formatOf, genresOf, htmlToText, parseTitle, posterOf, ratingOf,
   sortPlaylist, statusOf,
@@ -104,6 +105,8 @@ export function createAnimevostProvider(bases: string[]): ContentProvider {
   const rawCache = new TtlCache<RawItem>();
   const rawLoads = new TtlCache<Shared<RawItem>>();
   const playlists = new TtlCache<Shared<RawPlaylistItem[]>>();
+  // Выдача поиска по франшизе: один запрос на нормализованный ключ для всех сезонов (related).
+  const franchises = new TtlCache<Shared<TitleSummary[]>>();
 
   const remember = (items: RawItem[]) => items.forEach((r) => rawCache.set(String(r.id), r));
 
@@ -161,7 +164,7 @@ export function createAnimevostProvider(bases: string[]): ContentProvider {
       return sortPlaylist(res.filter((p): p is RawPlaylistItem => typeof p?.name === 'string'));
     }, signal);
 
-  return {
+  const self: ContentProvider = {
     async catalog(): Promise<CatalogInfo> {
       return {
         types: [
@@ -282,5 +285,21 @@ export function createAnimevostProvider(bases: string[]): ContentProvider {
       const items = data.map((r) => toSummary(r, now));
       return { items, page: 1, pageSize: items.length, total: items.length, hasMore: false };
     },
+
+    /** Никогда не бросает ошибку API: сбой поиска = «связей нет» (кроме отмены). Правила — related.ts, ADR-29. */
+    async related(id, signal): Promise<RelatedTitles> {
+      const none: RelatedTitles = { seasons: [], similar: [] };
+      try {
+        const cur = await self.title(id, signal);
+        const q = relatedQuery(cur.name);
+        if (!q) return none;
+        const items = await memo(franchises, normTitle(q), async (sig) => (await self.search({ q, page: 1, pageSize: 50, signal: sig })).items, signal);
+        return classifyRelated(cur, items);
+      } catch (e) {
+        if (e instanceof DOMException && e.name === 'AbortError') throw e;
+        return none;
+      }
+    },
   };
+  return self;
 }

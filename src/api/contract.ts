@@ -131,6 +131,21 @@ export interface Page<T> {
   hasMore: boolean;
 }
 
+/** Ссылка на сезон франшизы (блок «Сезоны» на странице тайтла). */
+export interface SeasonLink {
+  id: string;                   // id тайтла-сезона; переход — обычная навигация
+  number: number;               // номер сезона
+  label: string;                // '2 сезон'
+  year?: number;
+  current: boolean;             // это открытый сейчас тайтл
+}
+
+/** Связи тайтла. Пустые списки — штатный ответ (связей нет или не удалось определить). */
+export interface RelatedTitles {
+  seasons: SeasonLink[];        // по возрастанию номера; UI показывает блок при ≥ 2
+  similar: TitleSummary[];      // OVA, фильмы, спэшлы, спин-оффы, ремейки; без самого тайтла, по году; ≤ 40
+}
+
 /** Что умеет бэкенд: фронтенд рисует «скоро» по status, а не по хардкоду. */
 export interface CatalogInfo {
   types: { type: ContentType; label: string; status: 'available' | 'coming_soon' }[];

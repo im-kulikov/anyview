@@ -1,5 +1,5 @@
 import type {
-  CatalogInfo, ContentType, Page, Season, Source, Title, TitleSummary,
+  CatalogInfo, ContentType, Page, RelatedTitles, Season, Source, Title, TitleSummary,
 } from './contract';
 
 export interface ContentProvider {
@@ -8,5 +8,6 @@ export interface ContentProvider {
   title(id: string, signal?: AbortSignal): Promise<Title>;
   episodes(titleId: string, signal?: AbortSignal): Promise<Season[]>;
   sources(episodeId: string, signal?: AbortSignal): Promise<Source[]>;
+  related(id: string, signal?: AbortSignal): Promise<RelatedTitles>;
   search(p: { q: string; type?: ContentType; page: number; pageSize: number; signal?: AbortSignal }): Promise<Page<TitleSummary>>;
 }
