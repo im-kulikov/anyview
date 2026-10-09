@@ -10,14 +10,15 @@ export function Header() {
   const { pathname, key } = useLocation();
   const navigate = useNavigate();
   const searchMode = pathname === '/search';
+  const backMode = searchMode || pathname.startsWith('/title/');
   return (
     <header className={styles.header}>
       <div className={styles.slot}>
-        {searchMode ? (
+        {backMode ? (
           <Link
-            to="/"
+            to={searchMode ? '/' : '/anime'}
             className={styles.back}
-            aria-label={S.search.close}
+            aria-label={searchMode ? S.search.close : S.search.back}
             onClick={(e) => {
               // «Назад» ведёт туда, откуда пришли; без истории — на главную.
               if (key !== 'default') {
