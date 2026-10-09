@@ -64,6 +64,8 @@ export const S = {
     votes: (n: string, w: string) => `${n} ${w}`,
     poster: (name: string) => `Постер: ${name}`,
     infoType: 'Тип', infoEpisodes: 'Эпизоды', infoYear: 'Год', infoStatus: 'Статус', infoDirector: 'Режиссёр', infoVoice: 'Озвучка',
+    infoSource: 'Первоисточник', infoAuthor: 'Автор оригинала', infoStudio: 'Студия',
+    characters: 'Главные герои', voicedBy: (n: string) => `Сейю: ${n}`, dataFrom: 'Данные: Shikimori, AniList',
     episodes: 'Серии',
     seasons: 'Сезоны',
     similar: 'Похожие',

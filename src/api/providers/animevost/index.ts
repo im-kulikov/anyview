@@ -1,11 +1,13 @@
 import {
   ApiError,
-  type CatalogInfo, type Episode, type Page, type RelatedTitles, type Season, type Source, type Title, type TitleSummary,
+  type CatalogInfo, type Episode, type Page, type RelatedTitles, type Season, type Source, type Title, type TitleDetails, type TitleSummary,
 } from '../../contract';
 import type { ContentProvider } from '../../provider';
 import { https } from '../../../lib/https';
 import { createClient, form } from './client';
 import { lastPath, MAX_PAGE } from './urls';
+import { ANILIST, ANILIST_QUERY, pickShikimori, SHIKIMORI, toDetails, type AniListMedia, type ShikiAnime, type ShikiListItem } from './details';
+import { REQUEST_TIMEOUT_MS } from './client';
 import { classifyRelated, normTitle, relatedQuery } from './related';
 import {
   backdropOf, episodesOf, formatOf, genresOf, htmlToText, parseTitle, posterOf, ratingOf,
@@ -98,6 +100,24 @@ export function toTitle(raw: RawItem, now = new Date()): Title {
     externalIds: { animevost: String(raw.id) },
     providers: ['animevost'],
   };
+}
+
+/** Запрос к внешней базе: таймаут + сигнал страницы; любой сбой — ApiError (Query не кэширует его как «данных нет»). */
+async function extJson<T>(url: string, init: RequestInit | undefined, signal?: AbortSignal): Promise<T> {
+  const sig = signal ? AbortSignal.any([signal, AbortSignal.timeout(REQUEST_TIMEOUT_MS)]) : AbortSignal.timeout(REQUEST_TIMEOUT_MS);
+  let res: Response;
+  try {
+    res = await fetch(url, { ...init, signal: sig });
+  } catch (e) {
+    if (signal?.aborted) throw e;
+    throw new ApiError('network', 'Нет соединения');
+  }
+  if (!res.ok) throw new ApiError('http', `HTTP ${res.status}`, res.status);
+  try {
+    return (await res.json()) as T;
+  } catch {
+    throw new ApiError('parse', 'Некорректный ответ API');
+  }
 }
 
 export function createAnimevostProvider(bases: string[]): ContentProvider {
@@ -284,6 +304,34 @@ export function createAnimevostProvider(bases: string[]): ContentProvider {
       const now = new Date();
       const items = data.map((r) => toSummary(r, now));
       return { items, page: 1, pageSize: items.length, total: items.length, hasMore: false };
+    },
+
+    /**
+     * Жанры, первоисточник, автор, герои с сейю из Shikimori и AniList (ADR-30). Нет строгого совпадения — пусто.
+     * Сбой Shikimori бросается (не кэшируется как «данных нет»); сбой AniList лишь убирает его поля.
+     */
+    async details(id, signal): Promise<TitleDetails> {
+      const cur = await self.title(id, signal);
+      const names = [cur.originalName, cur.name].filter((n): n is string => !!n);
+      const none: TitleDetails = { genres: [], studios: [], characters: [], providers: [] };
+      const list = await extJson<ShikiListItem[]>(`${SHIKIMORI}/animes?limit=10&search=${encodeURIComponent(names[0])}`, undefined, signal);
+      const hit = Array.isArray(list) ? pickShikimori(list, names, cur.year) : undefined;
+      if (!hit) return none;
+      const shiki = await extJson<ShikiAnime>(`${SHIKIMORI}/animes/${hit.id}`, undefined, signal);
+      let ani: AniListMedia | undefined;
+      if (shiki.myanimelist_id) {
+        try {
+          const r = await extJson<{ data?: { Media?: AniListMedia } }>(ANILIST, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: ANILIST_QUERY, variables: { mal: shiki.myanimelist_id } }),
+          }, signal);
+          ani = r.data?.Media ?? undefined;
+        } catch (e) {
+          if (signal?.aborted) throw e;
+        }
+      }
+      return toDetails(shiki, ani);
     },
 
     /**
