@@ -14,6 +14,7 @@ function createAnimevostRouter(rawBases: string | undefined): ContentProvider {
     title: (id, s) => anime.title(id, s),
     episodes: (id, s) => anime.episodes(id, s),
     sources: (id, s) => anime.sources(id, s),
+    related: (id, s) => anime.related(id, s),
   };
 }
 
@@ -21,7 +22,7 @@ function createAnimevostRouter(rawBases: string | undefined): ContentProvider {
 function createAnyviewProvider(apiBase: string | undefined): ContentProvider {
   const fail = (): Promise<never> =>
     Promise.reject(new ApiError('network', `Provider "anyview" is not implemented (VITE_API_BASE=${apiBase ?? 'unset'})`));
-  return { catalog: fail, updates: fail, title: fail, episodes: fail, sources: fail, search: fail };
+  return { catalog: fail, updates: fail, title: fail, episodes: fail, sources: fail, related: fail, search: fail };
 }
 
 /** Выбор провайдера по VITE_PROVIDER; неизвестное значение — ошибка конфигурации при старте. */

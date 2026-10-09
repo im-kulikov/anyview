@@ -65,18 +65,18 @@ src/
   api/
     contract.ts            ← типы из API_CONTRACT.md §2, один в один
     provider.ts            ← интерфейс ContentProvider
-    hooks.ts               ← useUpdates, useTitle, useEpisodes, useSources, useSearch
+    hooks.ts               ← useUpdates, useTitle, useEpisodes, useSources, useRelated, useSearch
     keys.ts                ← ключи запросов Query, STALE, FEED_PAGE_SIZE
     feedCache.ts           ← снимок первой страницы ленты в localStorage (повторный визит, §8)
     index.ts               ← сборка провайдера: аниме → animevost, остальное → comingSoon
     providers/
       animevost/  client.ts (fetch, перебор баз)  parse.ts (чистые функции)  urls.ts (базы, путь ленты — общие с vite.config)
-                  index.ts (адаптер и маппинг toSummary/toTitle, кэш)  parse.test.ts  provider.test.ts
+                  index.ts (адаптер и маппинг toSummary/toTitle, кэш)  related.ts (сезоны и «Похожие», ADR-29)  parse.test.ts  provider.test.ts  related.test.ts
       comingSoon.ts        ← сериалы и фильмы: catalog() → coming_soon
   features/
     home/  catalog/  soon/  notfound/  search/
     sync/     SyncPage — экран `/sync` (ленивый чанк, §5.8)
-    title/    TitlePage, ExpandableText
+    title/    TitlePage, ExpandableText, RelatedBlocks («Сезоны», «Похожие»)
     player/   Player, EpisodeList, pickEpisode, chooseSource, useMediaSession (+ тесты)
   components/     TitleCard, ContinueCard, Cover, Rail, PosterGrid, SectionHeader, Header, BottomNav,
                   DesktopHeader, SearchField, Skeleton, ErrorState, RatingPill, Logo, Footer, OfflineBanner
@@ -97,7 +97,7 @@ scripts/          check-budget.mjs: бюджет стартового JS в CI
 
 Отдельных компонентов `EmptyState` и `Chip` нет — разметка внутри `SearchPage` и `TitlePage`. При добавлении каталога или файла уровня модуля обновлять это дерево.
 
-Хуки данных — тонкие обёртки над TanStack Query (`useUpdates`, `useTitle`, `useEpisodes`, `useSources`, `useSearch`).
+Хуки данных — тонкие обёртки над TanStack Query (`useUpdates`, `useTitle`, `useEpisodes`, `useSources`, `useRelated`, `useSearch`).
 
 Конфиг через `import.meta.env` (переменные других имён кодом не читаются):
 
@@ -197,6 +197,9 @@ scripts/          check-budget.mjs: бюджет стартового JS в CI
 5. **Теги** — жанры «таблетками» `#Жанр`. В MVP некликабельные: фильтра по жанру в API нет.
 6. **Плеер** (§5.5).
 7. **Серии (плейлист).** Моб. — список под плеером. Десктоп — колонка справа от плеера со своей прокруткой (max-height ≈ высоте плеера). Строка: кадр 16:9 (кадр серии или заглушка), «N серия», подпись, полоса прогресса, галочка у просмотренных. Подпись: «Просмотрено» (≥ 90 %), «Осталось X мин» (есть позиция и длительность), «Новая» (это `latestEpisode` онгоинга и прогресса нет), иначе пусто. Текущая серия — рамка акцентного цвета и значок «играет». Ещё не вышедшая (`available: false`) — пунктир, часики, «Выйдет 16 октября» (или «Скоро», если даты нет), не кликается.
+
+8. **Сезоны** (между героем и плеером; в макете нет, DESIGN.md §6, п. 14). Ряд ссылок-«таблеток» `<a>` на `/title/:id`: «1 сезон» + год мелко; текущий — `aria-current="page"`; зона ≥ 44 px. Телефон: горизонтальная прокрутка ряда, текущий сезон автопрокручивается в видимую часть (прокручивается сам ряд, не страница); десктоп: перенос строк. Показывается при ≥ 2 сезонах. Пока связи грузятся, место зарезервировано (нет сдвига макета).
+9. **Похожие** (после серий). Лента `Rail` из `TitleCard`: первые 10, «Показать все (N)» раскрывает все сеткой. Показывается при ≥ 1. Данные — `related(id)` (API_CONTRACT §5.3, ADR-29); запрос стартует после появления тайтла и страницу не задерживает; любая ошибка = блоков нет.
 
 Десктоп дополнительно: хлебные крошки «Аниме › Название».
 

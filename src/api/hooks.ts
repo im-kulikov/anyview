@@ -25,6 +25,10 @@ export const episodesQuery = (id: string) =>
 export const sourcesQuery = (episodeId: string) =>
   queryOptions({ queryKey: keys.sources(episodeId), queryFn: ({ signal }) => provider.sources(episodeId, signal), staleTime: STALE.item });
 
+/** Сезоны и «Похожие»: адаптер не бросает ошибок, повторов нет; хук вызывают после появления тайтла. */
+export const relatedQuery = (id: string) =>
+  queryOptions({ queryKey: keys.related(id), queryFn: ({ signal }) => provider.related(id, signal), staleTime: STALE.item, retry: 0 });
+
 /** Ключ нормализован (регистр и пробелы по краям), в запрос уходит текст как набран. */
 export const searchQuery = (q: string) =>
   queryOptions({
@@ -47,6 +51,8 @@ export const useUpdates = () => useInfiniteQuery({ ...updatesQuery(), select: se
 export const useTitle = (id: string) => useQuery(titleQuery(id));
 
 export const useEpisodes = (id: string) => useQuery(episodesQuery(id));
+
+export const useRelated = (id: string) => useQuery(relatedQuery(id));
 
 export const useSources = (episodeId: string | undefined) =>
   useQuery({ ...sourcesQuery(episodeId ?? ''), enabled: !!episodeId });

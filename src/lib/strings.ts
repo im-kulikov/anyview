@@ -65,6 +65,9 @@ export const S = {
     poster: (name: string) => `Постер: ${name}`,
     infoType: 'Тип', infoEpisodes: 'Эпизоды', infoYear: 'Год', infoStatus: 'Статус', infoDirector: 'Режиссёр', infoVoice: 'Озвучка',
     episodes: 'Серии',
+    seasons: 'Сезоны',
+    similar: 'Похожие',
+    similarAll: (n: number) => `Показать все (${n})`,
     released: (a: number, b: string) => `вышло ${a} из ${b}`,
   },
   player: {

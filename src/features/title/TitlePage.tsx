@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
 import { Heart, Play, Star } from 'lucide-react';
 import { ApiError, type Episode, type Source, type Title } from '../../api/contract';
-import { useEpisodes, useTitle } from '../../api/hooks';
+import { useEpisodes, useRelated, useTitle } from '../../api/hooks';
 import { Cover } from '../../components/Cover';
 import { ErrorState } from '../../components/ErrorState';
 import { Skeleton } from '../../components/Skeleton';
@@ -12,6 +12,7 @@ import { EpisodeList } from '../player/EpisodeList';
 import { pickEpisode } from '../player/pickEpisode';
 import { isResumable } from '../player/playerModel';
 import { ExpandableText } from './ExpandableText';
+import { SeasonsBlock, SimilarBlock } from './RelatedBlocks';
 import { S } from '../../lib/strings';
 import { episodesText, formatLong, statusLabel, votesWord, formatNumber } from '../../lib/format';
 import { favoritesStore, isFavorite, progressStore, toggleFavorite, useStore } from '../../lib/storage';
@@ -50,6 +51,7 @@ function TitleBody({ title, episodes, episodesPending }: { title: Title; episode
   const [params, setParams] = useSearchParams();
   const progress = useStore(progressStore);
   const favorites = useStore(favoritesStore);
+  const relatedQ = useRelated(title.id); // стартует, когда тайтл уже есть: страницу не задерживает
   const playerRef = useRef<PlayerHandle>(null);
   const [source, setSource] = useState<Source | undefined>();
   const [picked, setPicked] = useState<string | null | undefined>(undefined);
@@ -167,6 +169,8 @@ function TitleBody({ title, episodes, episodesPending }: { title: Title; episode
         </div>
       </section>
 
+      <SeasonsBlock related={relatedQ.data} pending={relatedQ.isPending} />
+
       <section id="player" className={styles.watch}>
         {episodesPending ? (
           <Skeleton className={styles.playerSkel} />
@@ -193,6 +197,8 @@ function TitleBody({ title, episodes, episodesPending }: { title: Title; episode
           </>
         )}
       </section>
+
+      <SimilarBlock related={relatedQ.data} />
     </main>
   );
 }
