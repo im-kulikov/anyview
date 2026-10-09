@@ -230,7 +230,7 @@ export interface ContentProvider {
 
 - `animevostProvider` — MVP, адаптер ниже.
 - `anyviewProvider` — будущий: тонкий `fetch` к `/api/v1/*`, без маппинга, потому что сервер уже отдаёт контракт.
-- Выбор провайдера — одна переменная `VITE_PROVIDER` (`animevost` | `anyview`). Для сериалов и фильмов в MVP `catalog()` возвращает `coming_soon`, и экраны показывают заглушку.
+- Выбор провайдера — **планируется** (фаза 2): переменная `VITE_PROVIDER` (`animevost` | `anyview`). Сейчас она кодом не читается, провайдер собирается вручную в `src/api/index.ts`. Для сериалов и фильмов в MVP `catalog()` возвращает `coming_soon`, но фронтенд MVP `catalog()` не вызывает: «скоро» задано жёстко (`soon` в `DesktopHeader`, маршруты `/series` и `/movies` рендерят `SoonPage`, подписи в `strings.ts`). Чтение `catalog()` для `soon` и навигации — задача перехода на свой сервер (комментарий к `CatalogInfo` в §2 описывает цель).
 - Провайдер бросает только `ApiError`.
 
 Компоненты и хуки знают только `ContentProvider` и типы контракта. Никаких полей animevost за пределами `src/api/providers/animevost/`.
@@ -243,7 +243,7 @@ export interface ContentProvider {
 
 ### 5.1 Подключение и поведение API
 
-- Базы: `https://api.animetop.info/v1`, запасная `https://api.animevost.org/v1`. Обе отдают `Access-Control-Allow-Origin: *` на успешных ответах; `http://` редиректит на `https://`. Список баз — в конфиге; при **сетевой** ошибке пробуем следующую (кроме поиска, см. ниже) и запоминаем рабочую до конца сессии.
+- Базы: `https://api.animetop.info/v1`, запасная `https://api.animevost.org/v1`. Обе отдают `Access-Control-Allow-Origin: *` на успешных ответах; `http://` редиректит на `https://`. Список баз — в конфиге; при **сетевой** ошибке (исключение `fetch`) пробуем следующую (кроме поиска, см. ниже); HTTP-ответы 5xx на запасную базу **не** переключают, они сразу превращаются в `ApiError('http')` и запоминаем рабочую до конца сессии.
 - `GET /last?page=N&quantity=M` — лента обновлений. Больше **40** за страницу не отдаёт. `state.count` — всего тайтлов (3603).
 - `POST /search`, `POST /info`, `POST /playlist` — тело `application/x-www-form-urlencoded` (`name=…` / `id=…`), кодировать через `URLSearchParams`. GET на них → 405.
 - `GET /genres` — словарь `{"2":"Боевые искусства", …}`; ключ `"3":"Жанр"` — заголовок, выкинуть.
@@ -259,7 +259,9 @@ export interface ContentProvider {
 | `/info` с неизвестным id | 200 `{"state":{"status":"fail",…},"data":[]}` | `ApiError('not_found')` |
 | `/playlist` с неизвестным id | 200 `{"status":"fail","error":"Тайтл с таким id не найден"}` (объект, не массив) | `ApiError('not_found')` |
 | `/last` за концом списка | `state.status: "fail"`, `data: []` | `{items:[], hasMore:false}` |
-| id не вида `av-<цифры>` | — | `ApiError('not_found')` без запроса |
+| id не вида `av-<цифры>` | `POST /info` с нечисловым `id` (`id=abc`) даёт HTTP 500 с HTML | `ApiError('not_found')` без запроса (защита regexp `^av-\d+$`) |
+| `/last?page=1` без `quantity` или `page=0` | HTTP 500 с HTML-страницей (не JSON); `quantity=0` → `state.status:"fail"`, `data:[]`; `GET /last` без параметров отдаёт 1 тайтл | адаптер всегда передаёт `page ≥ 1` и `quantity` |
+| `/search` из 1 символа | принимается, до 50 результатов | порог 2 символов — решение фронтенда (SPEC §5.6), не ограничение API |
 
 **Поиск.** Отличить «ничего не нашли» от обрыва сети браузер не может: на 404 нет CORS-заголовка. Правило: для `/search` не перебираем базы и не повторяем запрос; если `fetch` упал с `TypeError`, `navigator.onLine === true` и эта база уже успешно отвечала в текущей сессии — возвращаем пустую страницу, иначе `ApiError('network')`. Пометить в коде `shortcut:`; правильное решение — прокси с CORS на всех ответах (RESEARCH.md §1.4) или свой сервер.
 
@@ -267,7 +269,7 @@ export interface ContentProvider {
 
 ### 5.2 Форма ответа
 
-`/last`, `/info`, `/search` → `{ state: {status, rek, page, count}, data: Item[] }`. Типы полей «плавают» — приводить через `Number(...)` / `String(...)`:
+`/last`, `/info`, `/search` → `{ state: {status, rek, page, count}, data: Item[] }`. Осмысленны `page` и `count` только у `/last`; у `/search` и `/info` они равны 0, поле `rek` везде 1 и не используется. Типы полей «плавают» — приводить через `Number(...)` / `String(...)`:
 
 ```json
 {
@@ -304,14 +306,14 @@ export interface ContentProvider {
 |---|---|---|
 | `id` | `id` | `av-{id}` |
 | `type` | — | всегда `anime` |
-| `format` | `type` | **без учёта регистра**: `тв`→`tv`, `полнометражный фильм`→`movie`, `короткометражный фильм`→`short`, `ona`→`ona`, `ova`/`ова`→`ova`, `тв-спэшл`/`спешл`→`special`, иначе `unknown` |
+| `format` | `type` | поле ненадёжно: «Врата Штейна (фильм)» приходит как `ТВ`, «Призрак в доспехах: Синдром одиночки — Фильм» как `ТВ-спэшл`; встречались значения `ТВ`, `ONA`, `OVA`, `ТВ-спэшл`, `полнометражный фильм`, `Полнометражный фильм`, `короткометражный фильм`. От `format !== 'movie'` зависят `latestEpisode` и строка «Эпизоды», так что неверно определённый фильм получит серию. Известное ограничение MVP. Правило **без учёта регистра**: `тв`→`tv`, `полнометражный фильм`→`movie`, `короткометражный фильм`→`short`, `ona`→`ona`, `ova`/`ова`→`ova`, `тв-спэшл`/`спешл`→`special`, иначе `unknown` |
 | `name` | `title` | часть до первого ` / ` (пробел-слэш-пробел), без хвостовых `[…]` |
 | `originalName` | `title` | часть после первого ` / ` до первого `[`; нет ` / ` — поля нет |
 | `episodes` | `title` | первая скобка вида `[<слово?> A(-B)? из C(+)?]`, слово-префикс (`ОВА`, `OVA`, `Спешл`) допускается: `[1-15 из 26]` → `{released:15,total:26}`; `[1 из 12+]` → `{released:1,total:12,totalIsEstimate:true}`; `[0-11 из 11]` → `{released:11,total:11}`; `[ОВА 1-2 из 2]` → `{released:2,total:2}` |
 | `status` | `episodes` | `released ≥ total` и нет `+` → `released`; иначе `ongoing`; счётчика нет → `unknown` |
-| `latestEpisode` | `episodes.released` | `{number, label:'{n} серия'}` **только при `status === 'ongoing'`** и `format !== 'movie'` |
+| `latestEpisode` | `episodes.released` | `{number, label:'{n} серия'}` **только при `status === 'ongoing'`**, `format !== 'movie'` и `released ≥ 1` |
 | `nextEpisode` | `title` | `[2 серия - 15 октября]` → `{number:2, airDate}`; год выбрать так, чтобы дата попала в окно [сегодня − 30 дней; сегодня + 335 дней] (`now` передаётся в функцию — для тестов). `[N серия - в 2027 году]` → `{number:N}` без даты |
-| `year` | `year` | `Number`, `NaN` → нет поля |
+| `year` | `year` | `Number`; `NaN` или `≤ 0` → нет поля |
 | `poster` | `urlImagePreview` | `{url: https(...)}` |
 | `backdrop` | `screenImage` | первый непустой элемент → `new URL(path, origin(urlImagePreview))`. Это скриншоты ~711×400: UI всегда показывает фон размытым. Пустой массив → поля нет (UI берёт размытый постер) |
 | `description` | `description` | `htmlToText()` — **строковая** функция без DOM: `<br>` (с идущим за ним `\n`) → один `\n`, остальные теги удалить, сущности `&nbsp; &amp; &lt; &gt; &quot; &#39; &laquo; &raquo; &mdash; &ndash; &hellip;` и числовые `&#…;` декодировать, 3+ переводов строк → 2, trim |
@@ -321,11 +323,13 @@ export interface ContentProvider {
 | `voiceovers` | — | `['AnimeVost']` |
 | `externalIds.animevost` | `id` | |
 | Сезоны | `/playlist` | один сезон `number: 1`; серии сортировать по первому числу в `name`, без числа — в конец в исходном порядке |
-| `Episode.id` | `id`, файл | `av-{rawId}-{videoId}`, `videoId` — число из имени mp4 (`605012250`) |
+| `Episode.id` | `id`, файл | `av-{rawId}-{videoId}`, `videoId` — число из имени mp4 (`605012250`); нет числа — запасной `av-{rawId}-i{index}` |
 | `Episode.number` | `name` | первое число в `name`; нет — поля нет |
 | `Episode.preview` | `preview` | через `https()` |
 | `Episode.available` | — | `true` для серий из плейлиста; плюс синтетическая серия из `nextEpisode`: `id = av-{rawId}-next-{n}`, `available: false` |
-| `Source` (×2) | `std`, `hd` | `SD 480p` (`std`, `height: 480`) и `HD 720p` (`hd`, `height: 720`); `stream = {kind:'file', url: https(...), mime:'video/mp4'}`; `audio = [{lang:'ru', kind:'dub', studio:'AnimeVost'}]`; у `hd` пустой строки источника нет |
+| `Source` (×2) | `std`, `hd` | `SD 480p` (`std`, `height: 480`) и `HD 720p` (`hd`, `height: 720`); `Source.id = {episodeId}-{height}`; `stream = {kind:'file', url: https(...), mime:'video/mp4'}`; `audio = [{lang:'ru', kind:'dub', studio:'AnimeVost'}]`; у `hd` пустой строки источника нет |
+
+Не заполняются (всегда пусто): `Title.altNames`, `tags`, `credits.studios`. `GET /genres` документирован, но в MVP кодом не используется. `htmlToText` декодирует и шестнадцатеричные сущности (`&#x…;`), неизвестные именованные оставляет как есть.
 
 Не используем: `timer` (не совпадает с датой следующей серии), `series` (строка с одинарными кавычками, не JSON; серии надёжнее брать из `/playlist`), `isFavorite`, `isLikes`.
 
@@ -334,6 +338,7 @@ export interface ContentProvider {
 - `updates()` и `search()` кладут сырые элементы в кэш адаптера по `id`.
 - `title(id)` сначала берёт элемент из этого кэша (у `/info` те же поля, что у `/last` и `/search`) и только при прямом заходе по ссылке вызывает `POST /info`.
 - `episodes(titleId)` и `sources(episodeId)` используют **одну** мемоизированную загрузку `playlist(rawId)` (промис в `Map`, общий на вкладку). `sources()` разбирает `av-{rawId}-{videoId}`, ждёт `playlist(rawId)` и находит серию по `videoId`. Синтетическая серия `…-next-…` → пустой список источников.
+- **Кэш адаптера живёт до перезагрузки вкладки.** `rawCache` и `playlists` — `Map` без инвалидации и лимита (удаляется только упавший промис). `staleTime` Query не помогает: повторный `provider.episodes()` вернёт тот же плейлист, поэтому новая серия онгоинга в долгой вкладке не появится до перезагрузки. Известное ограничение MVP; нужен лимит и сброс при `refetch` (ADR-12 в [adr/](adr/README.md)).
 
 `https(url)` — одна функция: `http://` → `https://`. Проверено: `video.animetop.info` (206 на Range) и `media.animetop.info` (200) работают по HTTPS. Без этого GitHub Pages (HTTPS) заблокирует видео как смешанный контент.
 

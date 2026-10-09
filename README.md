@@ -1,30 +1,97 @@
 # anyview
 
-Сайт для просмотра аниме, позже — сериалов и фильмов. MVP: SPA на React + Vite + TypeScript поверх публичного API animevost, деплой в GitHub Pages.
+Сайт для просмотра аниме, позже — сериалов и фильмов. MVP (этапы M0–M6 смержены): SPA на React + Vite + TypeScript поверх публичного API animevost, деплой в GitHub Pages. Своего сервера нет.
 
-Сайт (после первого деплоя): https://im-kulikov.github.io/anyview/
+Сайт: https://im-kulikov.github.io/anyview/
+
+Лицензия не выбрана (по умолчанию «все права защищены»); выбор за владельцем репозитория.
 
 ## Документы
 
 ```
 CLAUDE.md                    правила работы для Claude Code
+CONTRIBUTING.md              этапы, ветки, PR, проверка перед PR
 docs/SPEC.md                 ТЗ: экраны, поведение, этапы M0–M6 и приёмка
+docs/STATUS.md               фактическое состояние: замеры, отступления, ограничения, что не проверено
 docs/API_CONTRACT.md         единый контракт данных + адаптер animevost
 docs/DESIGN.md               токены, компоненты, правила вёрстки
 docs/design/mockups/         разметка макетов всех 10 экранов
 docs/RESEARCH.md             ресёрч источников и план фазы 2 (торренты, фильмы, сериалы)
-docs/ASSETS.md               логотип и иконки + промпты для Codex
+docs/ASSETS.md               логотип и иконки
+docs/adr/                    журнал архитектурных решений
 ```
 
-Макет (холст в Claude, приватный): https://claude.ai/artifact/LWLWRufQYRp74bwTnUqZR2
+## Быстрый старт
 
-## Перед стартом
+Нужен Node 22 (так в CI).
 
-1. **GitHub Pages.** Settings → Pages → Build and deployment → Source: **GitHub Actions**. Для приватного репозитория Pages работает только на платном плане GitHub (Pro/Team); на бесплатном репозиторий нужно сделать публичным.
-2. Желательно: выгрузить PNG экранов из холста (Share → Export) в `docs/design/screens/` — разметку макетов вне холста не запустить, картинки помогают сверять вёрстку. Что главнее при расхождениях — DESIGN.md §0.
-3. Логотип: промпты из `docs/ASSETS.md` для Codex, результат — в `public/brand/`.
+```bash
+npm ci
+npm run dev        # http://localhost:5173/anyview/  (из-за base в адресе есть /anyview/)
+npm run build      # tsc --noEmit + vite build, результат в dist/
+npm run preview    # посмотреть сборку локально
+npm run lint
+npm run typecheck
+npm test           # vitest в режиме watch; разово: npm test -- --run
+npm test -- --run src/lib/format.test.ts   # один файл
+```
 
-## Окружение облачной сессии
+Перед PR: `npm run lint && npm run typecheck && npm test -- --run && npm run build`.
+
+## Переменные окружения
+
+Задаются в `.env.local` (образец — `.env.example`).
+
+| Переменная | По умолчанию | Статус |
+|---|---|---|
+| `VITE_BASE` | `/anyview/` | работает (`vite.config.ts`) |
+| `VITE_ANIMEVOST_BASES` | `https://api.animetop.info/v1,https://api.animevost.org/v1` | работает (`src/api/index.ts`) |
+| `VITE_PROVIDER`, `VITE_API_BASE` | — | планируется (фаза 2, свой сервер); кодом **пока не читаются** |
+
+Если поменять базы API, не забудьте `preload` ленты в `index.html`: он записан с жёстким хостом и `quantity=30` (SPEC.md §8).
+
+## Структура
+
+```
+src/
+  main.tsx            старт, предзагрузка ленты
+  app/                router.tsx, Layout, ErrorBoundary (RouteError), queryClient
+  api/                contract.ts (типы), provider.ts (интерфейс), hooks.ts, keys.ts, index.ts
+    providers/        animevost/ (client, parse, index = адаптер и маппинг), comingSoon.ts
+  features/           home, catalog, title, player, search, soon, notfound
+  components/         общие компоненты (карточки, шапки, подвал, офлайн-плашка…)
+  lib/                storage, format, strings (все тексты), https, хуки
+  styles/             tokens.css, global.css
+public/               manifest, brand/ (логотип, иконки)
+```
+
+Подробно — SPEC.md §3. Код animevost живёт только в `src/api/providers/animevost/`; компоненты знают лишь `contract.ts` и `ContentProvider`.
+
+## Тесты
+
+Vitest, окружение `node`, без DOM. Покрыты: парсеры и адаптер animevost, `storage`, `format`, `https`, `pickEpisode`, `chooseSource`. Не покрыты автотестами: компоненты, плеер, роутинг. Ручной чек-лист перед релизом — в `docs/STATUS.md`.
+
+## Деплой
+
+`push` в `main` → CI (lint, typecheck, test, build) → копии `index.html` для прямых ссылок → GitHub Pages. На `pull_request` выполняются только проверки. Откат: revert коммита (новый деплой ≈ 2–3 минуты) или `workflow_dispatch` на нужном коммите. Подробности — SPEC.md §10.
+
+## Глоссарий
+
+- **Title (тайтл)** — единица каталога: аниме, позже сериал или фильм. **Episode (серия)** — единица просмотра; в интерфейсе «серия», в `<dl>` строка «Эпизоды» — счётчик.
+- **Source / Stream** — вариант видео серии (качество, озвучка) и способ его получить (`file`, позже `hls`/`iframe`).
+- **Лента (Rail)** — горизонтальный ряд карточек; **сетка (PosterGrid)** — вертикальный каталог; **раздел** — пункт навигации (Главная, Аниме…); **экран** — страница по маршруту.
+- **Онгоинг** — идущий тайтл (`status = ongoing`).
+
+## Известные ограничения и что не проверено
+
+Полный список — в `docs/STATUS.md`. Коротко:
+
+- Lighthouse Performance на мобильном 73–78 при цели ≥ 90 (минимум 80): упирается в чужой API без сжатия и постеры одного размера. Решение — прокси фазы 2.
+- Поиск без результатов отдаёт HTTP 404 без CORS-заголовка; пустой результат отличается от сети эвристикой (API_CONTRACT.md §5.1).
+- iPhone: полноэкранный режим нативный, серию из него переключить нельзя (SPEC.md §5.5).
+- Не проверено на реальных iPhone, Android, Firefox и Safari (только по описанию PR M6), а также доступ к API и видео из РФ: домены animevost могут блокироваться, на клиенте это не лечится.
+
+## Окружение облачной сессии (Claude Code)
 
 Стандартный уровень сети **Trusted** пускает к npm и GitHub, но не к API animevost, обложкам и опубликованному сайту. В настройках окружения: **Network access → Custom**, отметить **Also include default list of common package managers** и добавить в **Allowed domains**:
 
@@ -37,26 +104,3 @@ static.openni.ru
 im-kulikov.github.io
 fonts.gstatic.com
 ```
-
-## Запуск Claude Code
-
-Откройте репозиторий в Claude Code (лучше в auto mode, чтобы ходы шли без подтверждений) и отправьте:
-
-```text
-/goal Реализован MVP anyview по CLAUDE.md и docs/ (SPEC.md, API_CONTRACT.md, DESIGN.md): по порядку пройдены все этапы M0–M6 из docs/SPEC.md §11. Каждый этап — отдельная ветка и PR в main; в описании PR — чек-лист критериев приёмки этапа и как проверен каждый пункт; PR смержен только после зелёного CI, после мержа деплой в GitHub Pages успешен. Готово, когда в переписке показано: (1) на последнем коммите main `npm run lint && npm run typecheck && npm test -- --run && npm run build` завершилась с кодом 0; (2) последний запуск workflow деплоя для main — success (вывод gh run list или gh run view), а `curl -sI` по https://im-kulikov.github.io/anyview/ и https://im-kulikov.github.io/anyview/anime вернул 200 — если сеть окружения не пускает на github.io, достаточно success деплоя; (3) список ссылок на смерженные PR M0, M1, M2, M3, M4, M5, M6; (4) тесты адаптера из docs/API_CONTRACT.md §5.4 есть и проходят; (5) в PR M3 и M6 приведён замер Lighthouse mobile для / и /anime по docs/SPEC.md §8, а если Lighthouse в окружении не запускается — сказано почему и что проверено вместо него; (6) в итоговом сообщении перечислено, что проверить из окружения нельзя (реальный iPhone, доступ из РФ). Ограничения: поведение и дизайн не расходятся с docs без записи об этом в PR; расхождения реального API с docs/API_CONTRACT.md исправлены в самом документе тем же PR; новые зависимости вне списка из CLAUDE.md — только с обоснованием в PR; ничего не мержится с красным CI. Если GitHub Pages не включён и включить его нельзя — остановись и напиши, что нажать. Остановись не позже чем через 100 ходов с отчётом, на каком этапе работа.
-```
-
-Проверять работу по шагам: `/goal` без аргументов — статус, `/goal clear` — остановить. Хотите смотреть каждый этап до мержа — замените в условии «PR смержен только после зелёного CI» на «PR открыт» и запускайте Goal по одному этапу (`…пройден этап M0 из docs/SPEC.md §11…`).
-
-
-## Разработка
-
-```bash
-npm install
-npm run dev        # локальная разработка
-npm run build      # сборка в dist/
-```
-
-Переменные окружения (`.env.local`): `VITE_BASE` (по умолчанию `/anyview/`), `VITE_PROVIDER` (`animevost`), `VITE_ANIMEVOST_BASES` (список баз API через запятую), `VITE_API_BASE` (будущий свой API).
-
-Ограничение: домены API и видео animevost могут быть недоступны из РФ из-за блокировок — на клиенте это не лечится.
