@@ -30,7 +30,7 @@ export function SearchField({ active }: { active: boolean }) {
   const go = (q: string) => {
     const url = `/search${q ? `?q=${encodeURIComponent(q)}` : ''}`;
     // Первый переход — в историю (чтобы «Назад» вернул на предыдущий экран), дальше — replace.
-    navigate(url, { replace: isSearch, preventScrollReset: true, state: { fromField: true } });
+    navigate(url, { replace: isSearch, preventScrollReset: isSearch, state: { fromField: true } });
   };
 
   useEffect(() => {

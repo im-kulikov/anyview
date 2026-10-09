@@ -4,8 +4,8 @@
   z-index: 20;
   border-bottom: 1px solid var(--border);
   background: var(--header-bg);
-  backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px); /* после префикса: иначе минификатор оставляет только префиксный вариант */
 }
 .inner {
   max-width: 1280px;

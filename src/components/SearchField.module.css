@@ -41,6 +41,7 @@
 }
 .input::placeholder {
   color: var(--text-3);
+  text-overflow: ellipsis;
 }
 .input::-webkit-search-cancel-button {
   display: none;

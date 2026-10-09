@@ -96,10 +96,10 @@ public/
 |---|---|---|---|
 | `VITE_BASE` | `/anyview/` | `base` для GitHub Pages (имя репозитория) | да |
 | `VITE_ANIMEVOST_BASES` | `https://api.animetop.info/v1,https://api.animevost.org/v1` | список баз, пробуем по порядку | да |
-| `VITE_PROVIDER` | `animevost` | `animevost` или будущий `anyview` | нет, зарезервирована (фаза 2) |
-| `VITE_API_BASE` | — | база своего API | нет, зарезервирована (фаза 2) |
+| `VITE_PROVIDER` | `animevost` | `animevost` или будущий `anyview`; неизвестное значение — ошибка при старте | частично: `anyview` — заготовка, все вызовы падают ошибкой «not implemented» |
+| `VITE_API_BASE` | — | база своего API (`anyview`) | нет, зарезервирована (фаза 2) |
 
-Пока провайдер собирается вручную в `src/api/index.ts`. Образец — `.env.example`.
+Провайдер выбирается в `src/api/index.ts` (`createProvider`). Образец — `.env.example`.
 
 ---
 

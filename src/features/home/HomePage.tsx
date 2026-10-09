@@ -26,17 +26,19 @@ export function HomePage() {
   const freshIds = new Set(fresh.map((t) => t.id));
   const latest = (first ?? []).filter((t) => !freshIds.has(t.id)).slice(0, LATEST);
 
-  if (q.isError && !first) return <main className={styles.main}><ErrorState onRetry={() => void q.refetch()} /></main>;
+  // Ошибка ленты не ломает остальные секции (SPEC §6): «Продолжить» и «Избранное» читаются локально.
+  const failed = q.isError && !first;
+  const retry = <ErrorState onRetry={() => void q.refetch()} />;
 
   return (
     <main className={styles.main}>
       <section className={styles.section}>
         <SectionHeader title={S.home.fresh} to="/anime" label={S.home.freshAll} text={S.home.all} />
-        <Rail>
+        {failed ? retry : <Rail>
           {first
             ? fresh.map((t, i) => <TitleCard key={t.id} title={t} showEpisode priority={i < 1} className={styles.railCard} />)
             : Array.from({ length: 6 }, (_, i) => <TitleCardSkeleton key={i} className={styles.railCard} />)}
-        </Rail>
+        </Rail>}
       </section>
 
       {history.length > 0 && (
@@ -64,7 +66,7 @@ export function HomePage() {
 
       <section className={styles.section}>
         <SectionHeader title={S.home.latest} to="/anime" label={S.home.latestAll} text={S.home.catalog} />
-        {first ? (
+        {failed ? retry : first ? (
           <PosterGrid items={latest} />
         ) : (
           <PosterGrid items={[]} skeletons={LATEST} />

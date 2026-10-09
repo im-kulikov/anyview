@@ -232,6 +232,7 @@ export interface ContentProvider {
 - `anyviewProvider` — будущий: тонкий `fetch` к `/api/v1/*`, без маппинга, потому что сервер уже отдаёт контракт.
 - Выбор провайдера — **планируется** (фаза 2): переменная `VITE_PROVIDER` (`animevost` | `anyview`). Сейчас она кодом не читается, провайдер собирается вручную в `src/api/index.ts`. Для сериалов и фильмов в MVP `catalog()` возвращает `coming_soon`, но фронтенд MVP `catalog()` не вызывает: «скоро» задано жёстко (`soon` в `DesktopHeader`, маршруты `/series` и `/movies` рендерят `SoonPage`, подписи в `strings.ts`). Чтение `catalog()` для `soon` и навигации — задача перехода на свой сервер (комментарий к `CatalogInfo` в §2 описывает цель).
 - Провайдер бросает только `ApiError`.
+- Идентификаторы MVP (`av-<id>`, `av-<id>-<videoId>`) сохраняются в `localStorage` и в ссылках пользователей. Условие перехода на `anyview`: сервер принимает legacy-id `av-*` в `GET /titles/{id}` и `/episodes/{id}/sources`, а канонический id отдаёт в ответе; `Title.externalIds.animevost` остаётся для сопоставления. Дубли `videoId` внутри плейлиста получают суффикс `-2`, `-3`.
 
 Компоненты и хуки знают только `ContentProvider` и типы контракта. Никаких полей animevost за пределами `src/api/providers/animevost/`.
 

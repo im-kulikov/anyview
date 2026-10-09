@@ -7,7 +7,7 @@ import styles from './ContinueCard.module.css';
 
 export function ContinueCard({ entry: e, className = '' }: { entry: HistoryEntry; className?: string }) {
   const pct = e.duration > 0 ? Math.min(100, (e.position / e.duration) * 100) : 0;
-  const left = e.duration > 0 && e.position > 0 ? S.player.left(Math.max(1, Math.round((e.duration - e.position) / 60))) : '';
+  const left = e.duration > 0 && e.position > 0 ? S.player.left(Math.max(1, Math.round((e.duration - e.position) / 60))).toLowerCase() : '';
   return (
     <Link to={`/title/${e.title.id}?episode=${encodeURIComponent(e.episodeId)}`} className={`${styles.card} ${className}`}>
       <Cover src={e.still ?? e.title.poster?.url} name={e.title.name} ratio="16 / 9" className={styles.cover}>
