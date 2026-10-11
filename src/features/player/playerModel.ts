@@ -10,6 +10,19 @@ export const HIDE_MS = 3000;
 /** Обратный отсчёт до автоперехода, с. */
 export const COUNTDOWN_S = 5;
 
+/** Пропуск заставки: типичная длина опенинга, с. Меток опенинга в данных нет — перемотка вслепую. */
+export const SKIP_SECONDS = 85;
+
+/** Следующая скорость по кругу; неизвестная → 1. */
+export const nextSpeed = (cur: number, speeds: readonly number[]): number => speeds[(speeds.indexOf(cur) + 1) % speeds.length] ?? 1;
+
+/** Серии, подходящие под запрос: номер начинается с введённых цифр или в названии есть введённый текст (регистр не важен). */
+export function filterEpisodes<T extends { number?: number; name: string }>(list: T[], q: string): T[] {
+  const t = q.trim().toLowerCase();
+  if (!t) return list;
+  return list.filter((e) => String(e.number ?? '').startsWith(t) || e.name.toLowerCase().includes(t));
+}
+
 type Pos = { position: number; duration: number };
 
 /** Серия начата и не досмотрена: можно продолжить. */

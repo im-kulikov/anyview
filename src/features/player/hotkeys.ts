@@ -4,7 +4,8 @@ export type KeyAction =
   | { type: 'volume'; delta: number }
   | { type: 'fullscreen' }
   | { type: 'mute' }
-  | { type: 'next' };
+  | { type: 'next' }
+  | { type: 'skip' };
 
 export interface KeyInput {
   key: string;
@@ -36,6 +37,7 @@ export function keyAction(i: KeyInput): KeyAction | null {
   if (key === 'k') return { type: 'toggle' };
   if (key === 'f') return { type: 'fullscreen' };
   if (key === 'm') return { type: 'mute' };
+  if (key === 's') return { type: 'skip' };
   if (i.onInteractive) return null;
   if (key === 'arrowleft') return { type: 'seek', delta: -10 };
   if (key === 'arrowright') return { type: 'seek', delta: 10 };

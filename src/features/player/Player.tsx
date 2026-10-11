@@ -7,12 +7,12 @@ import { keys, STALE } from '../../api/keys';
 import { provider } from '../../api/index';
 import { S } from '../../lib/strings';
 import { formatTime } from '../../lib/format';
-import { getPrefs, progressStore, resetProgress, saveProgress, setPrefs, useStore, usePrefs } from '../../lib/storage';
+import { getPrefs, progressStore, resetProgress, saveProgress, setPrefs, SPEEDS, useStore, usePrefs } from '../../lib/storage';
 import { Controls } from './Controls';
 import { EpisodePanel } from './EpisodePanel';
 import { nextEpisode, prevEpisode } from './pickEpisode';
 import { chooseSource } from './chooseSource';
-import { bufferedEnd, createRequestGate, endedAction, engineFor, errorAction, HIDE_MS, resumeFrom, SAVE_MS, stepVolume } from './playerModel';
+import { bufferedEnd, createRequestGate, endedAction, engineFor, errorAction, HIDE_MS, nextSpeed, resumeFrom, SAVE_MS, SKIP_SECONDS, stepVolume } from './playerModel';
 import { initialPlayback, playbackReducer } from './playerReducer';
 import type { KeyAction } from './hotkeys';
 import { useHotkeys } from './useHotkeys';
@@ -153,6 +153,12 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player({ title, e
     }
   }, [prefs.volume, prefs.muted]);
 
+  // Скорость из настроек; defaultPlaybackRate держит её при смене серии (загрузка нового src сбрасывает playbackRate).
+  useEffect(() => {
+    const v = videoRef.current;
+    if (v) v.defaultPlaybackRate = v.playbackRate = prefs.speed;
+  }, [prefs.speed]);
+
   // Сохранение позиции при уходе на другую вкладку и со страницы; состояние полного экрана.
   useEffect(() => {
     const v = videoRef.current; // в cleanup ref уже null: элемент запоминаем заранее
@@ -233,6 +239,7 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player({ title, e
     else if (a.type === 'fullscreen') toggleFullscreen();
     else if (a.type === 'mute' && v) setPrefs({ muted: !v.muted });
     else if (a.type === 'next') goNext();
+    else if (a.type === 'skip') seekBy(SKIP_SECONDS);
     bump();
   });
 
@@ -386,13 +393,20 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player({ title, e
             })}
           </div>
         )}
-        <span className={styles.spacer} />
-        <button type="button" className={styles.round} aria-label={S.player.prev} disabled={!prev} onClick={() => prev && playEpisode(prev)}>
-          <SkipBack size={18} aria-hidden="true" />
-        </button>
-        <button type="button" className={styles.round} aria-label={S.player.next} disabled={!next} onClick={goNext}>
-          <SkipForward size={18} aria-hidden="true" />
-        </button>
+        <div className={styles.tools}>
+          <button type="button" className={styles.pillBtn} aria-label={S.player.skip} title={S.player.skip} onClick={() => seekBy(SKIP_SECONDS)}>
+            {S.player.skipText}
+          </button>
+          <button type="button" className={styles.pillBtn} aria-label={S.player.speed(prefs.speed)} title={S.player.speed(prefs.speed)} onClick={() => setPrefs({ speed: nextSpeed(prefs.speed, SPEEDS) })}>
+            {prefs.speed}×
+          </button>
+          <button type="button" className={styles.round} aria-label={S.player.prev} disabled={!prev} onClick={() => prev && playEpisode(prev)}>
+            <SkipBack size={18} aria-hidden="true" />
+          </button>
+          <button type="button" className={styles.round} aria-label={S.player.next} disabled={!next} onClick={goNext}>
+            <SkipForward size={18} aria-hidden="true" />
+          </button>
+        </div>
       </div>
     </div>
   );

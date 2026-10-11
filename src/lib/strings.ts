@@ -91,6 +91,8 @@ export const S = {
     nextIn: (n: number) => `Следующая серия через ${n}…`, cancel: 'Отмена',
     failed: 'Не удалось загрузить видео', loading: 'Загрузка видео',
     watched: 'Просмотрено', left: (m: number) => `Осталось ${m} мин`, isNew: 'Новая', playing: 'Играет',
+    skip: 'Пропустить заставку: перемотать на 85 секунд', skipText: '+85 с', speed: (x: number) => `Скорость воспроизведения: ${x}×. Нажмите, чтобы сменить`,
+    findEpisode: 'Номер серии', noEpisodeFound: 'Такой серии нет',
     soon: 'Скоро', airs: (d: string) => `Выйдет ${d}`,
   },
   searchPage: {

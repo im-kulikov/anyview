@@ -183,6 +183,7 @@ const parsePrefs = (v: unknown): Prefs | undefined => {
     autoNext: typeof v.autoNext === 'boolean' ? v.autoNext : d.autoNext,
     volume: isNum(v.volume) ? clampVolume(v.volume) : d.volume,
     muted: typeof v.muted === 'boolean' ? v.muted : d.muted,
+    speed: (SPEEDS as readonly unknown[]).includes(v.speed) ? (v.speed as number) : d.speed,
   };
 };
 
@@ -196,7 +197,9 @@ export interface HistoryEntry {
   duration: number;
   updatedAt: number;
 }
-export interface Prefs { quality: 'auto' | 'sd' | 'hd'; autoNext: boolean; volume: number; muted: boolean }
+/** Допустимые скорости воспроизведения (кнопка под плеером переключает по кругу). */
+export const SPEEDS = [0.75, 1, 1.25, 1.5, 2] as const;
+export interface Prefs { quality: 'auto' | 'sd' | 'hd'; autoNext: boolean; volume: number; muted: boolean; speed: number }
 
 /** Метка избранного для слияния между устройствами: когда добавлено (`at`) или, при `del`, когда удалено («надгробие»). */
 export interface FavMeta { at: number; del?: true }
@@ -207,7 +210,7 @@ export type ListStatus = (typeof LIST_STATUSES)[number];
 /** Статус тайтла: `s: null` — «надгробие» (убран из списков; нужно слиянию, чтобы удаление не воскресало). `t` — снимок для показа без сети. */
 export interface StatusEntry { s: ListStatus | null; at: number; t?: TitleSummary }
 
-export const DEFAULT_PREFS: Prefs = { quality: 'auto', autoNext: true, volume: 1, muted: false };
+export const DEFAULT_PREFS: Prefs = { quality: 'auto', autoNext: true, volume: 1, muted: false, speed: 1 };
 export const LIMITS = { progress: 500, history: 50, favorites: 200, recent: 8, tombstones: 300, statuses: 300 };
 
 export const progressStore = createStore<Record<string, ProgressEntry>>('progress', {}, parseProgress);
