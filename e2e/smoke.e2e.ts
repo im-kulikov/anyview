@@ -8,7 +8,7 @@ import { seeds } from './seeds';
  */
 const ROUTES = [
   '/', '/anime', '/library', '/library?tab=watching', '/library?tab=favorites',
-  '/search?q=%D1%82%D0%BE%D0%BA%D0%B8%D0%B9', '/title/av-4000', '/sync', '/series', '/movies', '/no-such-route',
+  '/search?q=%D1%82%D0%BE%D0%BA%D0%B8%D0%B9', '/title/av-4000', '/sync', '/diagnostics', '/series', '/movies', '/no-such-route',
 ];
 const VIEWPORTS = { phone: { width: 390, height: 844 }, desktop: { width: 1440, height: 900 } };
 /** Все маршруты — на пустых и полных данных; остальные наборы — на маршрутах, которые читают локальные данные. */
@@ -94,5 +94,23 @@ test.describe('данные на экранах', () => {
     await expect(page.getByText(ERROR_TEXT).first()).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Продолжить просмотр' })).toBeVisible(); // история читается локально (SPEC §6)
     expect(net.unexpected).toEqual([]);
+  });
+
+  test('диагностика: отчёт копируется в буфер — версия, страница, форма данных; содержимое только по галочке', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await open(page, seeds.full, '/diagnostics');
+    const clip = () => page.evaluate(() => navigator.clipboard.readText());
+    await page.getByRole('button', { name: 'Скопировать отчёт' }).click();
+    await expect(page.getByRole('button', { name: 'Скопировано' })).toBeVisible();
+    const plain = await clip();
+    expect(plain).toMatch(/Версия: ([0-9a-f]{7}|dev)/); // в CI — sha коммита, локально — dev
+    expect(plain).toContain('/anyview/diagnostics');
+    expect(plain).toContain('anyview:v1:history');
+    expect(plain).toContain('массив[5]');
+    expect(plain).not.toContain('"episodeName"');
+    await page.getByLabel('Добавить данные хранилища').check();
+    await page.getByRole('button', { name: /Скопир/ }).click();
+    await expect(page.getByRole('button', { name: 'Скопировано' })).toBeVisible();
+    expect(await clip()).toContain('"episodeName"');
   });
 });

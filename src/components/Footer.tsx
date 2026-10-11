@@ -10,6 +10,9 @@ export function Footer() {
         <Link to="/sync" className={styles.link}>
           {S.footer.sync}
         </Link>
+        <Link to="/diagnostics" className={styles.link}>
+          {S.footer.diag}
+        </Link>
         <span>{S.footer.right}</span>
       </div>
     </footer>

@@ -9,6 +9,8 @@ export default defineConfig(({ mode }) => {
   return {
     base,
     plugins: [react(), htmlPlugin(env, base)],
+    // hidden: карты лежат рядом с чанками, но браузер их не подгружает; по ним `scripts/decode-stack.mjs` расшифровывает стек из отчёта
+    build: { sourcemap: 'hidden' as const },
     test: { environment: 'node' },
   };
 });
