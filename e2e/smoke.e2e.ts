@@ -103,7 +103,7 @@ test.describe('данные на экранах', () => {
     await page.getByRole('button', { name: 'Скопировать отчёт' }).click();
     await expect(page.getByRole('button', { name: 'Скопировано' })).toBeVisible();
     const plain = await clip();
-    expect(plain).toContain('Версия: dev');
+    expect(plain).toMatch(/Версия: ([0-9a-f]{7}|dev)/); // в CI — sha коммита, локально — dev
     expect(plain).toContain('/anyview/diagnostics');
     expect(plain).toContain('anyview:v1:history');
     expect(plain).toContain('массив[5]');
