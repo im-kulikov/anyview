@@ -71,6 +71,7 @@ export const S = {
     continueEpisode: (n: number) => `Продолжить ${n} серию`,
     favorite: 'В избранное',
     favorited: 'В избранном',
+    share: 'Поделиться',
     toCatalog: 'В каталог',
     votes: (n: string, w: string) => `${n} ${w}`,
     poster: (name: string) => `Постер: ${name}`,

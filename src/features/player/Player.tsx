@@ -292,6 +292,7 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player({ title, e
           ref={videoRef}
           className={styles.video}
           playsInline
+          x-webkit-airplay="allow"
           preload="none"
           poster={current.preview?.url}
           onClick={() => {

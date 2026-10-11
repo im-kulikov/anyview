@@ -118,3 +118,44 @@ test.describe('плеер на телефоне', () => {
     await expect(page.getByRole('button', { name: 'Картинка в картинке' })).toBeVisible();
   });
 });
+
+test.describe('волна 2', () => {
+  test.use(PHONE);
+  const last = () => ({ 'anyview:last': JSON.stringify({ path: '/title/av-4000', ts: Date.now() }) });
+
+  test('стартовые экраны подключены и файлы отдаются', async ({ page, request }) => {
+    await mockApi(page);
+    await page.goto('/anyview/');
+    const hrefs = await page.locator('link[rel="apple-touch-startup-image"]').evaluateAll((l) => l.map((e) => e.getAttribute('href')!));
+    expect(hrefs.length).toBeGreaterThanOrEqual(10);
+    for (const h of hrefs) expect((await request.get(h)).ok()).toBe(true);
+  });
+
+  test('холодный запуск установленного приложения возвращает на последний тайтл, «Назад» ведёт на главную', async ({ browser }) => {
+    const ctx = await browser.newContext({ ...PHONE, userAgent: IPHONE_SAFARI });
+    await ctx.addInitScript(() => Object.defineProperty(navigator, 'standalone', { get: () => true }));
+    const page = await ctx.newPage();
+    await seeded(page, last(), '/');
+    await expect(page).toHaveURL(/\/title\/av-4000$/);
+    await page.getByRole('link', { name: 'Назад' }).click();
+    await expect(page).toHaveURL(/\/anyview\/$/);
+    await ctx.close();
+  });
+
+  test('в обычном браузере главная остаётся главной', async ({ page }) => {
+    await seeded(page, last(), '/');
+    await expect(page).toHaveURL(/\/anyview\/$/);
+  });
+
+  test('кнопка «Поделиться» есть, когда доступен navigator.share', async ({ page }) => {
+    await page.addInitScript(() => Object.defineProperty(navigator, 'share', { value: () => Promise.resolve() }));
+    await seeded(page, seeds.empty, '/title/av-4000');
+    await expect(page.getByRole('button', { name: 'Поделиться' })).toBeVisible();
+  });
+
+  test('на /diagnostics есть кнопка «Назад» в шапке', async ({ page }) => {
+    await seeded(page, seeds.empty, '/diagnostics');
+    await page.getByRole('link', { name: 'Назад' }).click();
+    await expect(page).toHaveURL(/\/anyview\/sync$/);
+  });
+});
