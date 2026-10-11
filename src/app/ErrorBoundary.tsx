@@ -4,6 +4,7 @@ import { S } from '../lib/strings';
 import { report } from '../lib/report';
 import { resetLocalData } from '../lib/storage';
 import { ErrorState } from '../components/ErrorState';
+import { BugReport } from '../components/BugReport';
 import styles from './ErrorBoundary.module.css';
 
 /**
@@ -18,6 +19,7 @@ export function RouteError() {
   return (
     <main>
       <ErrorState title={S.boundary.title} hint={S.boundary.hint} onRetry={() => location.reload()} />
+      <BugReport error={err} />
       <div className={styles.recover}>
         <a href={import.meta.env.BASE_URL} className={styles.link}>{S.boundary.home}</a>
         {confirming ? (
