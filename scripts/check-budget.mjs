@@ -13,3 +13,12 @@ if (kb > BUDGET_KB) {
   console.error('Бюджет стартового JS превышен');
   process.exit(1);
 }
+
+// Service worker (ADR-39): оболочка должна оставаться крошечной.
+const SW_BUDGET_KB = 5;
+const swKb = gzipSync(readFileSync('dist/sw.js')).length / 1000;
+console.log(`dist/sw.js: ${swKb.toFixed(1)} КБ gzip (бюджет ${SW_BUDGET_KB})`);
+if (swKb > SW_BUDGET_KB) {
+  console.error('Бюджет service worker превышен');
+  process.exit(1);
+}

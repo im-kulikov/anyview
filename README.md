@@ -49,6 +49,7 @@ npm test -- --run src/lib/format.test.ts   # один файл
 | `VITE_PROVIDER` | `animevost` | `animevost` или `anyview` (заготовка: все вызовы падают ошибкой «not implemented»); `src/api/index.ts` |
 | `VITE_API_BASE` | — | база своего API для `anyview`; пока только попадает в CSP и текст ошибки |
 | `VITE_SITE_URL` | `https://im-kulikov.github.io` + `VITE_BASE` | абсолютный адрес для `og:image` (`config/htmlPlugin.ts`) |
+| `VITE_SW` | — | `off` — выложить `sw.js`, снимающий service worker и кеши, и не регистрировать воркер (ADR-39) |
 | `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID` (+ `_STORAGE_BUCKET`, `_MESSAGING_SENDER_ID`) | значения проекта в `.env.production` | публичная конфигурация синхронизации (не секреты); без них `/sync` пишет «Синхронизация недоступна» (`src/sync/config.ts`) |
 | `VITE_GOOGLE_CLIENT_ID` | в `.env.production` | OAuth Web Client ID для входа Google |
 

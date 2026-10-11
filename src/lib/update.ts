@@ -1,4 +1,5 @@
 import { BUILD_SHA } from './bugReport';
+import { resetSwCache } from './sw';
 
 /** Обновление установленного приложения: iOS держит его в памяти днями и не перезагружает страницу, поэтому версию сверяем сами при возврате на экран. */
 const GUARD_KEY = 'anyview:reloaded';
@@ -49,5 +50,6 @@ export function watchUpdates(): void {
   window.addEventListener('pageshow', run);
   run();
   // Чанк удалён новым деплоем, а страница старая: единственное лечение — перезагрузка.
-  window.addEventListener('vite:preloadError', () => reloadOnce('chunk'));
+  // Кеш сбрасываем тоже: иначе воркер вернёт тот же старый index.html.
+  window.addEventListener('vite:preloadError', () => void resetSwCache().then(() => reloadOnce('chunk')));
 }
