@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { bufferedEnd, createRequestGate, endedAction, engineFor, errorAction, isResumable, percent, resumeFrom, RESUME_MIN, stepVolume } from './playerModel';
+import { bufferedEnd, createRequestGate, endedAction, engineFor, errorAction, filterEpisodes, isResumable, nextSpeed, percent, resumeFrom, RESUME_MIN, stepVolume } from './playerModel';
 
 const p = (position: number, duration = 100) => ({ position, duration });
 
@@ -69,4 +69,24 @@ test('engineFor: пока только прямые файлы', () => {
   expect(engineFor({ kind: 'file' })).toBe('native');
   expect(engineFor({ kind: 'hls' })).toBe('unsupported');
   expect(engineFor(undefined)).toBe('unsupported');
+});
+
+describe('скорость и поиск серии', () => {
+  const ep = (number: number | undefined, name: string) => ({ number, name });
+  const list = [ep(1, '1 серия'), ep(10, '10 серия'), ep(11, '11 серия'), ep(2, '2 серия'), ep(undefined, 'OVA Спецвыпуск')];
+
+  test('nextSpeed идёт по кругу, неизвестная скорость → 1', () => {
+    const speeds = [0.75, 1, 1.25, 1.5, 2];
+    expect(nextSpeed(1, speeds)).toBe(1.25);
+    expect(nextSpeed(2, speeds)).toBe(0.75);
+    expect(nextSpeed(3, speeds)).toBe(0.75); // не из списка: indexOf -1 → первый
+  });
+
+  test('filterEpisodes: по началу номера и по тексту названия', () => {
+    expect(filterEpisodes(list, '1').map((e) => e.number)).toEqual([1, 10, 11]);
+    expect(filterEpisodes(list, '10')).toEqual([list[1]]);
+    expect(filterEpisodes(list, 'СПЕЦ')).toEqual([list[4]]);
+    expect(filterEpisodes(list, '  ')).toBe(list);
+    expect(filterEpisodes(list, '99')).toEqual([]);
+  });
 });

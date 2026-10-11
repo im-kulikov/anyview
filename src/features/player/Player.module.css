@@ -233,6 +233,7 @@
 }
 .under {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
 }
@@ -297,4 +298,24 @@
     margin: 0;
     accent-color: var(--accent);
   }
+}
+
+.pillBtn {
+  min-width: 44px;
+  height: 44px;
+  padding: 0 14px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--surface-3);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Кнопки справа под плеером переносятся группой, а не по одной. */
+.tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
 }

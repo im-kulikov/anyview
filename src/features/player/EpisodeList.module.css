@@ -114,3 +114,26 @@
     width: 72px;
   }
 }
+
+.find {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 0 0 8px;
+  background: var(--surface-1);
+}
+.find input {
+  width: 100%;
+  height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface-3);
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+}
+.none {
+  margin: 8px 0;
+  color: var(--text-meta);
+}

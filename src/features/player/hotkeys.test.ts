@@ -15,9 +15,10 @@ describe('keyAction', () => {
     expect(k({ key: 'f' })).toEqual({ type: 'fullscreen' });
     expect(k({ key: 'm' })).toEqual({ type: 'mute' });
     expect(k({ key: 'N', shiftKey: true })).toEqual({ type: 'next' });
+    expect(k({ key: 's' })).toEqual({ type: 'skip' });
   });
   test('в полях ввода не срабатывает', () => {
-    for (const key of [' ', 'k', 'f', 'm', 'ArrowLeft']) expect(k({ key, inField: true })).toBeNull();
+    for (const key of [' ', 'k', 'f', 'm', 's', 'ArrowLeft']) expect(k({ key, inField: true })).toBeNull();
     expect(k({ key: 'N', shiftKey: true, inField: true })).toBeNull();
   });
   test('на кнопке пробел и стрелки остаются за кнопкой', () => {

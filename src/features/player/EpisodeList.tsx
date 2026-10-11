@@ -1,10 +1,14 @@
-import { memo, useEffect, useRef } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { AudioLines, Check, Clock } from 'lucide-react';
 import type { Episode, Title } from '../../api/contract';
 import { S } from '../../lib/strings';
 import { formatDay } from '../../lib/format';
 import { isWatched, progressStore, useStore } from '../../lib/storage';
+import { filterEpisodes } from './playerModel';
 import styles from './EpisodeList.module.css';
+
+/** Поле поиска серии появляется, когда серий больше этого числа. */
+const FIND_FROM = 12;
 
 function sub(ep: Episode, title: Title, p?: { position: number; duration: number }): string {
   if (!ep.available) return ep.airDate ? S.player.airs(formatDay(ep.airDate)) : S.player.soon;
@@ -23,6 +27,8 @@ export const EpisodeList = memo(function EpisodeList({ title, episodes, currentI
   onPick(ep: Episode): void;
 }) {
   const progress = useStore(progressStore);
+  const [q, setQ] = useState('');
+  const shown = filterEpisodes(episodes, q);
   const listRef = useRef<HTMLOListElement>(null);
 
   // Текущая серия видна в ближайшем контейнере со своей прокруткой (колонка, панель плеера, мобильный список); страницу не двигаем.
@@ -38,8 +44,15 @@ export const EpisodeList = memo(function EpisodeList({ title, episodes, currentI
   }, [currentId]);
 
   return (
+    <>
+    {episodes.length > FIND_FROM && (
+      <div className={styles.find}>
+        <input type="search" inputMode="search" enterKeyHint="search" aria-label={S.player.findEpisode} placeholder={S.player.findEpisode} value={q} onChange={(e) => setQ(e.target.value)} />
+      </div>
+    )}
+    {shown.length === 0 && <p className={styles.none}>{S.player.noEpisodeFound}</p>}
     <ol ref={listRef} className={`${styles.list} ${compact ? styles.compact : ''}`}>
-      {episodes.map((ep) => {
+      {shown.map((ep) => {
         const p = progress[ep.id];
         const text = sub(ep, title, p);
         if (!ep.available) {
@@ -69,5 +82,6 @@ export const EpisodeList = memo(function EpisodeList({ title, episodes, currentI
         );
       })}
     </ol>
+    </>
   );
 });
