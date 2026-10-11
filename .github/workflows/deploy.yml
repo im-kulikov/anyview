@@ -15,11 +15,11 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -36,7 +36,7 @@ jobs:
         run: |
           npx playwright install --with-deps chromium
           npm run e2e
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: e2e-report
@@ -48,7 +48,7 @@ jobs:
         run: |
           cd dist
           for p in anime series movies search sync library diagnostics 404; do cp index.html "$p.html"; done
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         if: github.ref == 'refs/heads/main'
         with:
           path: dist
@@ -56,7 +56,7 @@ jobs:
   deploy:
     if: github.ref == 'refs/heads/main'
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read
@@ -67,15 +67,15 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
       - name: Проверка после деплоя
         run: |
           for p in "" anime search sync library diagnostics manifest.webmanifest fonts/exo2-cyrillic.woff2; do
             curl -fsS --retry 5 --retry-delay 5 -o /dev/null "${{ steps.deployment.outputs.page_url }}$p"
           done
       # Рендер на живом сайте (сеть подменена): ловит то, чего не видит curl — падение экранов на данных. Красный шаг = тревога, откат — вручную (docs/STATUS.md).
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
