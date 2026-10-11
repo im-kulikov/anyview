@@ -73,3 +73,13 @@ test('resetLocalData: убирает данные приложения, ключ
   resetLocalData();
   expect([...data.keys()].sort()).toEqual(['anyview:schema', 'anyview:sync', 'other:key']);
 });
+
+test('формат и статус снимка — только известные значения (`__proto__` не должен дойти до подписей)', () => {
+  data.set('anyview:v1:favorites', JSON.stringify([
+    { ...base, id: 'p', format: '__proto__' },
+    { ...base, id: 'c', format: 'constructor' },
+    { ...base, id: 's', status: 'toString' },
+    { ...base, id: 'ok' },
+  ]));
+  expect(favoritesStore.get().map((t) => t.id)).toEqual(['ok']);
+});

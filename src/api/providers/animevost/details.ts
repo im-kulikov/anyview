@@ -1,4 +1,5 @@
 import type { CharacterInfo, TitleDetails } from '../../contract';
+import { own } from '../../../lib/own';
 import { normTitle } from './related';
 
 /**
@@ -49,8 +50,8 @@ export function toDetails(shiki: ShikiAnime, ani?: AniListMedia): TitleDetails {
     characters.push({ name, ...(voiceActor && { voiceActor }) });
   }
   const author = uniq((ani?.staff?.edges ?? []).filter((e) => /^original (story|creator)/i.test(e.role ?? '')).map((e) => e.node?.name?.full)).slice(0, 2).join(', ');
-  const source = SOURCE[ani?.source ?? ''];
-  const ageRating = AGE[shiki.rating ?? ''];
+  const source = own(SOURCE, ani?.source ?? '');
+  const ageRating = own(AGE, shiki.rating ?? '');
   return {
     genres: uniq((shiki.genres ?? []).map((g) => g.russian || g.name)),
     ...(source && { source }),

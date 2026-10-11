@@ -11,6 +11,7 @@ export default defineConfig(({ mode }) => {
     plugins: [react(), htmlPlugin(env, base)],
     // hidden: карты лежат рядом с чанками, но браузер их не подгружает; по ним `scripts/decode-stack.mjs` расшифровывает стек из отчёта
     build: { sourcemap: 'hidden' as const },
-    test: { environment: 'node' },
+    // глубокий фаззинг (FC_RUNS в тысячах) идёт дольше стандартных 5 с на тест
+    test: { environment: 'node', testTimeout: Number(process.env.FC_RUNS) > 1000 ? 900_000 : 5000 },
   };
 });

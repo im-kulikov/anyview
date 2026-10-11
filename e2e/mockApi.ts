@@ -10,7 +10,7 @@ const ANIME_HOSTS = ['api.animetop.info', 'api.animevost.org'];
 const IMAGE_HOSTS = ['static.openni.ru', 'media.test'];
 
 type Raw = { id: number; title: string };
-const items = last.data as unknown as Raw[];
+const baseItems = last.data as unknown as Raw[];
 
 const json = (route: Route, body: unknown, status = 200) =>
   route.fulfill({ status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(body) });
@@ -18,7 +18,13 @@ const json = (route: Route, body: unknown, status = 200) =>
 export interface Net { unexpected: string[]; failures: Record<string, 'http500' | 'abort' | undefined> }
 
 /** `failures.feed = 'http500'`: лента отвечает 500; 'abort' — обрыв соединения (как при отсутствии сети). */
-export async function mockApi(page: Page, opts: { feed?: 'http500' | 'abort' | 'empty' } = {}): Promise<Net> {
+export interface MockOpts {
+  feed?: 'http500' | 'abort' | 'empty';
+  /** Дополнительные (враждебные) элементы ленты и поиска — для фаззинга. */
+  extraItems?: unknown[];
+}
+
+export async function mockApi(page: Page, opts: MockOpts = {}): Promise<Net> {
   const net: Net = { unexpected: [], failures: {} };
   await page.route('**/*', async (route) => {
     const url = new URL(route.request().url());
@@ -33,7 +39,8 @@ export async function mockApi(page: Page, opts: { feed?: 'http500' | 'abort' | '
   return net;
 }
 
-async function animevost(route: Route, url: URL, opts: { feed?: 'http500' | 'abort' | 'empty' }) {
+async function animevost(route: Route, url: URL, opts: MockOpts) {
+  const items = [...baseItems, ...((opts.extraItems ?? []) as Raw[])];
   const path = url.pathname.replace(/^\/v1/, '');
   const req = route.request();
   const form = new URLSearchParams(req.postData() ?? '');
@@ -44,7 +51,7 @@ async function animevost(route: Route, url: URL, opts: { feed?: 'http500' | 'abo
     const page = Number(url.searchParams.get('page') ?? 1);
     // за концом списка API отвечает fail — штатный конец ленты (API_CONTRACT §5)
     if (page > 1) return json(route, { state: { status: 'fail' } });
-    return json(route, last);
+    return json(route, { ...last, data: items });
   }
   if (path === '/search') {
     const q = (form.get('name') ?? '').toLowerCase();

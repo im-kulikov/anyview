@@ -11,7 +11,7 @@ import { ANILIST, ANILIST_QUERY, pickShikimori, SHIKIMORI, toDetails, type AniLi
 import { REQUEST_TIMEOUT_MS } from './client';
 import { classifyRelated, franchiseOf, normTitle, relatedQuery } from './related';
 import {
-  backdropOf, episodesOf, str, formatOf, genresOf, htmlToText, parseTitle, posterOf, ratingOf,
+  backdropOf, episodesOf, num, str, formatOf, genresOf, htmlToText, parseTitle, posterOf, ratingOf,
   sortPlaylist, statusOf,
   type RawItem, type RawPlaylistItem,
 } from './parse';
@@ -51,7 +51,7 @@ interface Shared<T> { ctrl: AbortController; subs: number; done: boolean; p: Pro
 
 /** Элемент ленты пригоден для маппинга: иначе пропускаем его, а не роняем страницу. */
 const usable = (r: unknown): r is RawItem =>
-  typeof r === 'object' && r !== null && typeof (r as RawItem).title === 'string' && (r as RawItem).id != null;
+  typeof r === 'object' && r !== null && typeof (r as RawItem).title === 'string' && ['string', 'number'].includes(typeof (r as RawItem).id);
 const rawIdOf = (id: string): string => {
   const m = /^av-(\d+)$/.exec(id);
   if (!m) throw new ApiError('not_found', 'Тайтл не найден');
@@ -74,7 +74,7 @@ export function toSummary(raw: RawItem, now = new Date()): TitleSummary {
   const p = parseTitle(raw.title, now);
   const format = formatOf(raw.type);
   const status = statusOf(p.episodes);
-  const year = Number(raw.year);
+  const year = num(raw.year);
   const rating = ratingOf(raw.rating, raw.votes);
   const poster = posterOf(raw);
   return {
@@ -219,7 +219,7 @@ export function createAnimevostProvider(bases: string[]): ContentProvider {
       }
       const data = res.data.filter(usable);
       remember(data);
-      const count = Number(res.state.count);
+      const count = num(res.state.count);
       const total = Number.isFinite(count) ? count : undefined;
       const now = new Date();
       return {

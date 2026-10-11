@@ -157,8 +157,11 @@ const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFin
 const listOf = <T>(ok: (x: unknown) => x is T) => (v: unknown): T[] | undefined => (Array.isArray(v) ? v.filter(ok) : undefined);
 
 /** Снимок тайтла: вложенные поля проверяются тоже (иначе `rating: {}` из старой версии или облака роняет экран при `toFixed`). Негодный элемент отбрасывается целиком. */
+const FORMATS: unknown[] = ['tv', 'movie', 'ova', 'ona', 'special', 'short', 'unknown'];
+const STATUSES: unknown[] = ['announced', 'ongoing', 'released', 'unknown'];
+
 function isSummary(x: unknown): x is TitleSummary {
-  if (!(isObj(x) && isStr(x.id) && isStr(x.name) && isStr(x.type) && isStr(x.format) && isStr(x.status))) return false;
+  if (!(isObj(x) && isStr(x.id) && isStr(x.name) && isStr(x.type) && FORMATS.includes(x.format) && STATUSES.includes(x.status))) return false;
   const opt = (v: unknown, ok: (v: unknown) => boolean) => v === undefined || ok(v);
   return (
     opt(x.originalName, isStr) &&
