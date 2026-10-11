@@ -107,3 +107,14 @@ test.describe('подсказка «На экран Домой»', () => {
     await expect(page.getByText('хранит данные отдельно от Safari')).toHaveCount(0);
   });
 });
+
+test.describe('плеер на телефоне', () => {
+  test.use(PHONE);
+  test('кнопка «Картинка в картинке» не скрыта на узком экране', async ({ page }) => {
+    await page.addInitScript(() => Object.defineProperty(document, 'pictureInPictureEnabled', { value: true }));
+    await mockApi(page);
+    await page.goto('/anyview/title/av-4000');
+    await page.locator('main button[aria-label^="Смотреть"], main button:has-text("Смотреть")').first().click();
+    await expect(page.getByRole('button', { name: 'Картинка в картинке' })).toBeVisible();
+  });
+});
