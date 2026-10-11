@@ -4,6 +4,7 @@ import { Header } from '../components/Header';
 import { DesktopHeader } from '../components/DesktopHeader';
 import { OfflineBanner } from '../components/OfflineBanner';
 import { Footer } from '../components/Footer';
+import { UpdateBanner } from '../components/UpdateBanner';
 import { BottomNav } from '../components/BottomNav';
 import { coldStartTarget, rememberPath } from '../lib/resume';
 import { isStandalone } from '../lib/standalone';
@@ -32,6 +33,7 @@ export function Layout() {
       <Outlet />
       <Footer />
       <OfflineBanner />
+      <UpdateBanner />
       {showNav && <BottomNav />}
       <ScrollRestoration getKey={(loc) => (TAB_ROOTS.has(loc.pathname) ? loc.pathname : loc.key)} />
     </div>
