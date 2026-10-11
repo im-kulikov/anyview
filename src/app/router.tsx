@@ -4,6 +4,7 @@ import { RouteError } from './ErrorBoundary';
 import { SearchPage } from '../features/search/SearchPage';
 import { HomePage } from '../features/home/HomePage';
 import { CatalogPage } from '../features/catalog/CatalogPage';
+import { LibraryPage } from '../features/library/LibraryPage';
 import { SoonPage } from '../features/soon/SoonPage';
 import { NotFoundPage } from '../features/notfound/NotFoundPage';
 
@@ -16,6 +17,7 @@ export const router = createBrowserRouter(
       children: [
         { path: '/', element: <HomePage /> },
         { path: '/anime', element: <CatalogPage /> },
+        { path: '/library', element: <LibraryPage /> },
         { path: '/series', element: <SoonPage section="series" /> },
         { path: '/movies', element: <SoonPage section="movies" /> },
         {

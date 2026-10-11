@@ -204,8 +204,14 @@ export interface Prefs { quality: 'auto' | 'sd' | 'hd'; autoNext: boolean; volum
 /** Метка избранного для слияния между устройствами: когда добавлено (`at`) или, при `del`, когда удалено («надгробие»). */
 export interface FavMeta { at: number; del?: true }
 
+/** Список просмотра (статус тайтла у пользователя). */
+export const LIST_STATUSES = ['watching', 'planned', 'done', 'hold', 'dropped'] as const;
+export type ListStatus = (typeof LIST_STATUSES)[number];
+/** Статус тайтла: `s: null` — «надгробие» (убран из списков; нужно слиянию, чтобы удаление не воскресало). `t` — снимок для показа без сети. */
+export interface StatusEntry { s: ListStatus | null; at: number; t?: TitleSummary }
+
 export const DEFAULT_PREFS: Prefs = { quality: 'auto', autoNext: true, volume: 1, muted: false, speed: 1 };
-export const LIMITS = { progress: 500, history: 50, favorites: 200, recent: 8, tombstones: 300 };
+export const LIMITS = { progress: 500, history: 50, favorites: 200, recent: 8, tombstones: 300, statuses: 300 };
 
 export const progressStore = createStore<Record<string, ProgressEntry>>('progress', {}, parseProgress);
 export const historyStore = createStore<HistoryEntry[]>('history', [], listOf(isHistory));
@@ -214,6 +220,11 @@ const isMeta = (x: unknown): x is FavMeta => isObj(x) && isNum(x.at) && (x.del =
 const parseMeta = (v: unknown): Record<string, FavMeta> | undefined =>
   isObj(v) ? (Object.fromEntries(Object.entries(v).filter(([, m]) => isMeta(m))) as Record<string, FavMeta>) : undefined;
 export const favoritesMetaStore = createStore<Record<string, FavMeta>>('favoritesMeta', {}, parseMeta);
+const isEntry = (x: unknown): x is StatusEntry =>
+  isObj(x) && isNum(x.at) && (x.s === null || (LIST_STATUSES as readonly unknown[]).includes(x.s)) && (x.s === null ? x.t === undefined : isSummary(x.t));
+const parseStatuses = (v: unknown): Record<string, StatusEntry> | undefined =>
+  isObj(v) ? (Object.fromEntries(Object.entries(v).filter(([, e]) => isEntry(e))) as Record<string, StatusEntry>) : undefined;
+export const statusesStore = createStore<Record<string, StatusEntry>>('statuses', {}, parseStatuses);
 export const recentStore = createStore<string[]>('recentSearches', [], listOf(isStr));
 /** Первая страница ленты для мгновенного показа при повторном визите (api/feedCache.ts); всегда перепроверяется сетью. */
 export interface FeedSnapshot { savedAt: number; items: TitleSummary[]; total?: number; hasMore: boolean }
@@ -263,6 +274,8 @@ function saveProgressNow(a: Parameters<typeof saveProgress>[0]) {
     ids.sort((x, y) => progress[x].updatedAt - progress[y].updatedAt).slice(0, ids.length - LIMITS.progress).forEach((k) => delete progress[k]);
   }
   progressStore.set(progress);
+  const st = statusesStore.get()[a.title.id];
+  if (st?.s === 'watching') statusesStore.set({ ...statusesStore.get(), [a.title.id]: { ...st, t: toSnapshot(a.title) } }); // `at` не трогаем: это не действие пользователя
 
   const rest = historyStore.get().filter((h) => h.title.id !== a.title.id);
   const snapshot = toSnapshot(a.title);
@@ -311,6 +324,24 @@ export function toggleFavorite(t: TitleSummary | Title) {
   });
 }
 
+/** Живые записи не больше LIMITS.statuses (самые свежие), «надгробий» не больше LIMITS.tombstones. Чистая: используется и слиянием. */
+export function pruneStatuses(m: Record<string, StatusEntry>): Record<string, StatusEntry> {
+  const byNew = (x: [string, StatusEntry], y: [string, StatusEntry]) => y[1].at - x[1].at || (x[0] < y[0] ? -1 : 1);
+  const all = Object.entries(m);
+  const keep = [
+    ...all.filter(([, e]) => e.s !== null).sort(byNew).slice(0, LIMITS.statuses),
+    ...all.filter(([, e]) => e.s === null).sort(byNew).slice(0, LIMITS.tombstones),
+  ];
+  return Object.fromEntries(keep);
+}
+
+/** Поставить тайтлу статус; `null` — убрать из списков. */
+export function setStatus(t: TitleSummary | Title, s: ListStatus | null) {
+  const cur = statusesStore.get()[t.id];
+  if ((cur?.s ?? null) === s) return;
+  statusesStore.set(pruneStatuses({ ...statusesStore.get(), [t.id]: s ? { s, at: Date.now(), t: toSnapshot(t) } : { s: null, at: Date.now() } }));
+}
+
 export function addRecentSearch(q: string) {
   const text = q.trim();
   if (text.length < 2) return;
@@ -323,6 +354,7 @@ export interface LocalData {
   history: HistoryEntry[];
   favorites: TitleSummary[];
   favMeta: Record<string, FavMeta>;
+  statuses: Record<string, StatusEntry>;
 }
 
 export const readLocal = (): LocalData => ({
@@ -330,20 +362,22 @@ export const readLocal = (): LocalData => ({
   history: historyStore.get(),
   favorites: favoritesStore.get(),
   favMeta: favoritesMetaStore.get(),
+  statuses: statusesStore.get(),
 });
 
-/** Все четыре хранилища одним согласованным обновлением для `useSyncExternalStore`. */
+/** Все хранилища одним согласованным обновлением для `useSyncExternalStore`. */
 export function writeLocal(d: LocalData): void {
   batch(() => {
     progressStore.set(d.progress);
     historyStore.set(d.history);
     favoritesStore.set(d.favorites);
     favoritesMetaStore.set(d.favMeta);
+    statusesStore.set(d.statuses);
   });
 }
 
 export function subscribeLocal(cb: () => void): () => void {
-  const off = [progressStore, historyStore, favoritesStore, favoritesMetaStore].map((s) => s.subscribe(cb));
+  const off = [progressStore, historyStore, favoritesStore, favoritesMetaStore, statusesStore].map((s) => s.subscribe(cb));
   return () => off.forEach((f) => f());
 }
 
@@ -355,5 +389,6 @@ export function parseLocalData(v: unknown): LocalData | null {
     history: listOf(isHistory)(v.history) ?? [],
     favorites: listOf(isSummary)(v.favorites) ?? [],
     favMeta: parseMeta(v.favMeta) ?? {},
+    statuses: parseStatuses(v.statuses) ?? {},
   };
 }

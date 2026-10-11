@@ -5,7 +5,8 @@ import { Rail } from '../../components/Rail';
 import { SectionHeader } from '../../components/SectionHeader';
 import { TitleCard, TitleCardSkeleton } from '../../components/TitleCard';
 import { ContinueCard } from '../../components/ContinueCard';
-import { favoritesStore, historyStore, useStore } from '../../lib/storage';
+import { useNewEpisodes } from '../library/useNewEpisodes';
+import { favoritesStore, historyStore, statusesStore, useStore } from '../../lib/storage';
 import { PosterGrid } from '../../components/PosterGrid';
 import { ErrorState } from '../../components/ErrorState';
 import { S } from '../../lib/strings';
@@ -18,8 +19,12 @@ const LATEST = 12;
 export function HomePage() {
   useDocumentTitle();
   const q = useUpdates();
-  const history = useStore(historyStore).slice(0, 10);
+  const allHistory = useStore(historyStore);
+  // записи с новой серией — первыми
+  const history = [...allHistory].sort((a, b) => Number(fresh2.has(b.title.id)) - Number(fresh2.has(a.title.id))).slice(0, 10);
   const favorites = useStore(favoritesStore);
+  const hasStatuses = Object.values(useStore(statusesStore)).some((e) => e.s);
+  const fresh2 = useNewEpisodes();
   // Одна лента на главной и на /anime; для главной берём только первую страницу.
   const first = q.data?.pages[0]?.items;
   const fresh = (first ?? []).filter((t) => t.status === 'ongoing' && t.latestEpisode).slice(0, FRESH);
@@ -41,16 +46,24 @@ export function HomePage() {
         </Rail>}
       </section>
 
+      {history.length === 0 && favorites.length === 0 && !hasStatuses && (
+        <section className={styles.hint}>
+          <b>{S.home.hintTitle}</b>
+          <span>{S.home.hintBody}</span>
+          <Link to="/sync">{S.home.hintLink}</Link>
+        </section>
+      )}
+
       {history.length > 0 && (
         <section className={styles.section}>
           <SectionHeader title={S.home.continue} />
           <div className={styles.continueRail}>
             <Rail>
-              {history.map((h) => <ContinueCard key={h.title.id} entry={h} className={styles.continueCard} />)}
+              {history.map((h) => <ContinueCard key={h.title.id} entry={h} isNew={fresh2.has(h.title.id)} className={styles.continueCard} />)}
             </Rail>
           </div>
           <ul className={styles.continueGrid}>
-            {history.map((h) => <li key={h.title.id}><ContinueCard entry={h} /></li>)}
+            {history.map((h) => <li key={h.title.id}><ContinueCard entry={h} isNew={fresh2.has(h.title.id)} /></li>)}
           </ul>
         </section>
       )}
@@ -67,7 +80,7 @@ export function HomePage() {
       <section className={styles.section}>
         <SectionHeader title={S.home.latest} to="/anime" label={S.home.latestAll} text={S.home.catalog} />
         {failed ? retry : first ? (
-          <PosterGrid items={latest} />
+          <PosterGrid items={latest} showEpisode={false} />
         ) : (
           <PosterGrid items={[]} skeletons={LATEST} />
         )}

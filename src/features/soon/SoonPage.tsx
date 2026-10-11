@@ -48,6 +48,9 @@ export function SoonPage({ section }: { section: 'series' | 'movies' }) {
           <Link to="/" className={styles.secondary}>
             {S.soon.toHome}
           </Link>
+          <Link to={section === 'series' ? '/movies' : '/series'} className={styles.secondary}>
+            {S.soon.other[section]}
+          </Link>
         </div>
       </div>
     </main>
