@@ -1,0 +1,59 @@
+name: Fuzz
+
+# Ночной глубокий фаззинг (ADR-35): unit-свойства на тысячах прогонов и случайные порчи данных на экранах в Chromium.
+# В PR идёт короткая версия (FC_RUNS=150, FUZZ_RUNS=4, сид зафиксирован); здесь сид случайный и печатается в логе.
+# Падение = найдена настоящая дыра: в логе минимальный пример и сид, воспроизведение — `FC_SEED=<сид> npm test` или
+# `FUZZ_SEED=<сид> FUZZ_RUNS=<n> npm run e2e -- fuzz`. Красный запуск присылает письмо владельцу репозитория.
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+    inputs:
+      unit_runs:
+        description: 'Прогонов на каждое unit-свойство'
+        default: '20000'
+      e2e_runs:
+        description: 'Сценариев фаззинга экранов'
+        default: '100'
+      seed:
+        description: 'Сид e2e-фаззинга (пусто — случайный)'
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Unit-фаззинг (глубоко)
+        env:
+          FC_RUNS: ${{ inputs.unit_runs || '20000' }}
+        run: npm test -- --run
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+        env:
+          VITE_BUILD_SHA: ${{ github.sha }}
+      - name: E2E-фаззинг экранов
+        env:
+          FUZZ_RUNS: ${{ inputs.e2e_runs || '100' }}
+          IN_SEED: ${{ inputs.seed }}
+        run: |
+          SEED="${IN_SEED:-$(( (RANDOM * 32768 + RANDOM) % 2147483647 ))}"
+          echo "FUZZ_SEED=$SEED FUZZ_RUNS=$FUZZ_RUNS"
+          FUZZ_SEED="$SEED" npx playwright test fuzz
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: fuzz-report
+          path: |
+            playwright-report
+            test-results
+          retention-days: 14

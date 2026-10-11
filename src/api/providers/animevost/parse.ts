@@ -1,5 +1,6 @@
 import type { Episode, Image, Rating, Tag, TitleFormat, TitleStatus, EpisodeCounter } from '../../contract';
 import { https } from '../../../lib/https';
+import { own } from '../../../lib/own';
 import { IMAGE_ORIGIN } from './urls';
 
 export interface RawItem {
@@ -80,7 +81,7 @@ export function parseTitle(title: string, now: Date = new Date()): ParsedTitle {
     if (!m) continue;
     nextEpisode = { number: Number(m[1]) };
     const d = /^(\d{1,2})\s+([а-яё]+)$/i.exec(m[2].trim());
-    const month = d && MONTHS[d[2].toLowerCase()];
+    const month = d && own(MONTHS, d[2].toLowerCase());
     if (d && month) {
       const airDate = resolveAirDate(Number(d[1]), month, now);
       if (airDate) nextEpisode.airDate = airDate;
@@ -109,9 +110,11 @@ const FORMATS: Record<string, TitleFormat> = {
 
 /** Поля чужого API не всегда строки: нестроковое значение считается отсутствующим. */
 export const str = (v: unknown): string => (typeof v === 'string' ? v : '');
+/** Число из поля чужого API: число или числовая строка, всё остальное — NaN (`Number({})`/`Number(obj с toString: 0)` бросает или врёт). */
+export const num = (v: unknown): number => (typeof v === 'number' ? v : typeof v === 'string' ? Number(v) : NaN);
 
 export const formatOf = (type?: string): TitleFormat =>
-  FORMATS[str(type).trim().toLowerCase()] ?? 'unknown';
+  own(FORMATS, str(type).trim().toLowerCase()) ?? 'unknown';
 
 const ENTITIES: Record<string, string> = {
   nbsp: ' ', amp: '&', lt: '<', gt: '>', quot: '"', laquo: '«', raquo: '»',
@@ -139,8 +142,8 @@ export function htmlToText(input: string): string {
 
 /** Сумма баллов 1–5 → шкала 0–10; при votes < 5 рейтинга нет. */
 export function ratingOf(rating: unknown, votes: unknown): Rating | undefined {
-  const r = Number(rating);
-  const v = Number(votes);
+  const r = num(rating);
+  const v = num(votes);
   if (!Number.isFinite(r) || !Number.isFinite(v) || v < 5) return undefined;
   const value = Math.min(10, Math.round((r / v) * 2 * 10) / 10);
   return value > 0 ? { source: 'animevost', value, votes: v } : undefined;
@@ -174,7 +177,7 @@ const firstNumber = (s: string) => {
 };
 
 export const videoIdOf = (p: RawPlaylistItem): string | undefined =>
-  /(\d+)\.mp4/.exec(p.std ?? '')?.[1] ?? /(\d+)\.mp4/.exec(p.hd ?? '')?.[1];
+  /(\d+)\.mp4/.exec(str(p.std))?.[1] ?? /(\d+)\.mp4/.exec(str(p.hd))?.[1]; // поля чужого API не обязаны быть строками
 
 /** Сортировка по первому числу в имени; без числа — в конец в исходном порядке. */
 export function sortPlaylist<T extends { name: string }>(items: T[]): T[] {

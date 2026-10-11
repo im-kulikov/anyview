@@ -5,6 +5,11 @@ import { createAnimevostProvider, summariesOf, toSummary, toTitle } from '.';
 /** Чужой API не гарантирует форму полей: мусор в необязательных полях не должен ронять ни карточку, ни ленту. */
 const bad = (extra: Record<string, unknown>) => ({ id: 1, title: 'Тест / Test [1 из 12]', ...extra }) as unknown as RawItem;
 const GARBAGE: [string, RawItem][] = [
+  // найдено фаззингом (ADR-35)
+  ['type — __proto__ (поиск по словарю без hasOwn)', bad({ type: '__proto__' })],
+  ['type — constructor', bad({ type: 'constructor' })],
+  ['year — объект с toString: 0 (Number() бросает)', bad({ year: { toString: 0 } })],
+  ['rating — объект с toString: 0', bad({ rating: { toString: 0 }, votes: { toString: 0 } })],
   ['type — число', bad({ type: 3 })],
   ['genre — объект', bad({ genre: { a: 1 } })],
   ['description — число', bad({ description: 5 })],
@@ -34,5 +39,24 @@ describe('мусорные поля чужого API', () => {
     const page = await createAnimevostProvider(['https://a.test']).updates({ type: 'anime', page: 1, pageSize: 30 });
     expect(page.items.some((i) => i.id === 'av-8')).toBe(true);
     vi.unstubAllGlobals();
+  });
+});
+
+import { episodesOf } from './parse';
+import { toDetails } from './details';
+
+describe('найдено фаззингом (ADR-35)', () => {
+  test('type «__proto__» и «constructor» дают формат unknown, а не объект прототипа', () => {
+    expect(toSummary(bad({ type: '__proto__' })).format).toBe('unknown');
+    expect(toSummary(bad({ type: 'constructor' })).format).toBe('unknown');
+  });
+  test('плейлист: hd/std не строкой не роняют разбор серий', () => {
+    const eps = episodesOf('1', 'av-1', [{ name: '1 серия', std: { toString: false } as never, hd: 5 as never }]);
+    expect(eps).toHaveLength(1);
+  });
+  test('сведения: source «__proto__» и rating «constructor» не дают подписи', () => {
+    const d = toDetails({ rating: 'constructor' }, { source: '__proto__' });
+    expect(d.source).toBeUndefined();
+    expect(d.ageRating).toBeUndefined();
   });
 });

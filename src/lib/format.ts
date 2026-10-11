@@ -1,3 +1,4 @@
+import { own } from './own';
 import type { TitleFormat, TitleStatus, TitleSummary, EpisodeCounter } from '../api/contract';
 
 const RU_PLURAL = new Intl.PluralRules('ru');
@@ -25,13 +26,14 @@ const FORMAT_LONG: Record<TitleFormat, string> = {
 };
 const STATUS: Record<TitleStatus, string> = { ongoing: 'Онгоинг', released: 'Вышел', announced: 'Анонс', unknown: '' };
 
-export const formatShort = (f: TitleFormat) => FORMAT_SHORT[f];
-export const formatLong = (f: TitleFormat) => FORMAT_LONG[f];
-export const statusLabel = (s: TitleStatus) => STATUS[s];
+// `own`: формат и статус приходят из хранилища/облака; `__proto__` и `constructor` не должны давать функцию/объект вместо текста
+export const formatShort = (f: TitleFormat) => own(FORMAT_SHORT, f) ?? '';
+export const formatLong = (f: TitleFormat) => own(FORMAT_LONG, f) ?? '';
+export const statusLabel = (s: TitleStatus) => own(STATUS, s) ?? '';
 
 /** «Тип · Год» для карточек. */
 export const cardMeta = (t: Pick<TitleSummary, 'format' | 'year'>) =>
-  [FORMAT_SHORT[t.format], t.year].filter(Boolean).join(' · ');
+  [formatShort(t.format), t.year].filter(Boolean).join(' · ');
 
 export const ratingText = (value: number) => value.toFixed(1);
 

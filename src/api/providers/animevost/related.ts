@@ -1,3 +1,4 @@
+import { own } from '../../../lib/own';
 import type { FranchiseRef, RelatedTitles, SeasonLink, TitleSummary } from '../../contract';
 
 /**
@@ -34,7 +35,8 @@ export const headName = (base: string): string => base.split(SUBTITLE)[0].trim()
 /** Номер сезона по русскому маркеру; нет маркера — undefined. */
 export function seasonMarker(ru: string): number | undefined {
   const w = SEASON_WORD.exec(ru);
-  if (w && ORDINALS[w[1].toLowerCase()]) return ORDINALS[w[1].toLowerCase()];
+  const ord = w && own(ORDINALS, w[1].toLowerCase());
+  if (ord) return ord;
   const n = SEASON_NUM.exec(ru);
   return n ? Number(n[1]) : undefined;
 }
