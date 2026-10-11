@@ -13,3 +13,11 @@ test('новая серия: номер в ленте больше, чем в с
 test('тайтла нет в ленте — новой серии нет', () => {
   expect(newEpisodes([t('a', 1)], []).size).toBe(0);
 });
+
+test('граничные случаи', () => {
+  expect(newEpisodes([], [t('a', 5)]).size).toBe(0);
+  expect(newEpisodes([t('a', 3)], [t('a', 3)]).size).toBe(0); // не больше снимка
+  expect(newEpisodes([t('a', 3)], [t('a')]).size).toBe(0); // в ленте нет номера серии
+  expect(newEpisodes([t('a'), t('a')], [t('a', 2)]).size).toBe(1); // дубли в tracked — один ключ
+  expect(newEpisodes([t('a', 1)], [t('a', 4)]).get('a')?.latestEpisode?.number).toBe(4);
+});

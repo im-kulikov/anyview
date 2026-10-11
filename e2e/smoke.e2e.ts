@@ -13,8 +13,8 @@ const ROUTES = [
 const VIEWPORTS = { phone: { width: 390, height: 844 }, desktop: { width: 1440, height: 900 } };
 /** Все маршруты — на пустых и полных данных; остальные наборы — на маршрутах, которые читают локальные данные. */
 const FULL_MATRIX = ['empty', 'full'] as const;
-const DATA_SEEDS = ['history2', 'history50', 'legacyV1', 'corrupt', 'futureSchema', 'wrongFields'] as const;
-const DATA_ROUTES = ['/', '/library', '/title/av-4000', '/sync'];
+const DATA_SEEDS = ['history2', 'history50', 'legacyV1', 'corrupt', 'futureSchema', 'wrongFields', 'staleFeed'] as const;
+const DATA_ROUTES = ['/', '/anime', '/library', '/title/av-4000', '/sync'];
 const ERROR_TEXT = 'Что-то пошло не так';
 
 async function open(page: Page, seed: Record<string, string>, path: string) {

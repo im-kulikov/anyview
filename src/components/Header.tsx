@@ -23,7 +23,7 @@ export function Header() {
               // «Назад» ведёт туда, откуда пришли; без истории — на главную.
               if (key !== 'default') {
                 e.preventDefault();
-                navigate(-1);
+                void navigate(-1);
               }
             }}
           >

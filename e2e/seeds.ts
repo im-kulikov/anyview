@@ -60,6 +60,11 @@ export const seeds: Record<string, Seed> = {
   wrongFields: {
     'anyview:schema': '2',
     'anyview:v1:history': JSON.stringify([{ title: { id: 'av-1', name: null }, position: '12' }, ...historyOf(2)]),
-    'anyview:v1:favorites': JSON.stringify([{ id: 5 }, summary(raw[0])]),
+    'anyview:v1:favorites': JSON.stringify([{ id: 5 }, { ...summary(raw[1]), rating: {} }, { ...summary(raw[2]), poster: { url: 5 } }, summary(raw[0])]),
+  },
+  // снимок ленты прошлого релиза с негодными вложенными полями: восстанавливается до первого рендера
+  staleFeed: {
+    'anyview:schema': '2',
+    'anyview:v1:feed': JSON.stringify({ savedAt: NOW - 1000, hasMore: true, total: 3, items: [{ ...summary(raw[0]), rating: {} }, { ...summary(raw[1]), latestEpisode: { number: 'x' } }, summary(raw[2])] }),
   },
 };

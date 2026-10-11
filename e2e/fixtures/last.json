@@ -190,6 +190,21 @@
    "rating": 7,
    "votes": 10,
    "description": "OVA."
+  },
+  {
+   "id": 900003,
+   "title": "Враждебный элемент / Hostile [1 из 1]",
+   "year": {},
+   "type": 3,
+   "genre": {
+    "a": 1
+   },
+   "description": 5,
+   "director": {},
+   "rating": {},
+   "votes": [],
+   "screenImage": "x",
+   "urlImagePreview": 7
   }
  ]
 }

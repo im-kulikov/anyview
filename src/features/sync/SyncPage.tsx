@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Check, Cloud, CloudOff } from 'lucide-react';
 import { S } from '../../lib/strings';
 import { useDocumentTitle } from '../../lib/useDocumentTitle';
-import { deleteCloudData, getSyncState, renderSignIn, retry, signOut, start, subscribeSyncState } from '../../sync/engine';
+import { deleteCloudData, flag, getSyncState, renderSignIn, retry, signOut, start, subscribeSyncState } from '../../sync/engine';
 import styles from './SyncPage.module.css';
 
 const time = (t: number) => new Date(t).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
@@ -21,7 +21,7 @@ export function SyncPage() {
   }, [wantButton, st.user]);
 
   const who = st.user?.email ?? st.user?.name ?? '';
-  const pendingKnown = st.available && !st.known && !wantButton && localStorage.getItem('anyview:sync') === '1';
+  const pendingKnown = st.available && !st.known && !wantButton && flag.get();
 
   return (
     <main className={styles.main}>

@@ -23,6 +23,18 @@ export default tseslint.config(
     },
   },
   {
+    // Правила, которым нужны типы (≈ +30 с к lint): забытый await/catch, необработанный вариант switch, обращение к localStorage без try.
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['src/**/*.test.ts'],
+    languageOptions: { parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname } },
+    rules: {
+      '@typescript-eslint/no-floating-promises': 'error',
+      '@typescript-eslint/no-misused-promises': ['error', { checksVoidReturn: { attributes: false } }],
+      '@typescript-eslint/switch-exhaustiveness-check': 'error',
+      eqeqeq: ['error', 'smart'],
+    },
+  },
+  {
     // Слои (ARCH-21): код провайдеров — только внутри src/api; интерфейс знает контракт и ContentProvider.
     files: ['src/{app,components,features,lib,styles}/**/*.{ts,tsx}', 'src/main.tsx'],
     rules: {
