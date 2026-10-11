@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
-import { Heart, Play, Star } from 'lucide-react';
+import { Heart, Play, Share, Star } from 'lucide-react';
 import { ApiError, type Episode, type Source, type Title } from '../../api/contract';
 import { useDetails, useEpisodes, useRelated, useTitle } from '../../api/hooks';
 import { Cover } from '../../components/Cover';
@@ -150,6 +150,16 @@ function TitleBody({ title, episodes, episodesPending }: { title: Title; episode
                 <Heart size={20} fill={fav ? 'currentColor' : 'none'} aria-hidden="true" />
                 <span>{fav ? S.title.favorited : S.title.favorite}</span>
               </button>
+              {typeof navigator.share === 'function' && (
+                <button
+                  type="button"
+                  className={styles.share}
+                  aria-label={S.title.share}
+                  onClick={() => void navigator.share({ title: title.name, url: location.href }).catch(() => {})} // отмена листа «Поделиться» — не ошибка
+                >
+                  <Share size={20} aria-hidden="true" />
+                </button>
+              )}
               <ListSelect title={title} className={styles.list} />
             </div>
 

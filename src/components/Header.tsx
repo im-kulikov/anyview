@@ -10,13 +10,14 @@ export function Header() {
   const { pathname, key } = useLocation();
   const navigate = useNavigate();
   const searchMode = pathname === '/search';
-  const backMode = searchMode || pathname.startsWith('/title/');
+  const backMode = searchMode || pathname.startsWith('/title/') || pathname === '/diagnostics';
+  const fallback = searchMode ? '/' : pathname === '/diagnostics' ? '/sync' : '/anime';
   return (
     <header className={styles.header}>
       <div className={styles.slot}>
         {backMode ? (
           <Link
-            to={searchMode ? '/' : '/anime'}
+            to={fallback}
             className={styles.back}
             aria-label={searchMode ? S.search.close : S.search.back}
             onClick={(e) => {
