@@ -114,7 +114,11 @@
 }
 .actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
+}
+.list {
+  flex: 1 1 100%;
 }
 .cta {
   flex: 1;
@@ -375,6 +379,9 @@
   }
   .fav span {
     display: inline;
+  }
+  .list {
+    flex: 0 0 200px;
   }
   .mobileOnly {
     position: absolute;

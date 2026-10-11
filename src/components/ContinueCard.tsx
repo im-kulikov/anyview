@@ -5,7 +5,7 @@ import type { HistoryEntry } from '../lib/storage';
 import { Cover } from './Cover';
 import styles from './ContinueCard.module.css';
 
-export function ContinueCard({ entry: e, className = '' }: { entry: HistoryEntry; className?: string }) {
+export function ContinueCard({ entry: e, className = '', isNew = false }: { entry: HistoryEntry; className?: string; isNew?: boolean }) {
   const pct = e.duration > 0 ? Math.min(100, (e.position / e.duration) * 100) : 0;
   const left = e.duration > 0 && e.position > 0 ? S.player.left(Math.max(1, Math.round((e.duration - e.position) / 60))).toLowerCase() : '';
   return (
@@ -14,6 +14,7 @@ export function ContinueCard({ entry: e, className = '' }: { entry: HistoryEntry
         <span className={styles.play}>
           <Play size={18} fill="currentColor" aria-hidden="true" />
         </span>
+        {isNew && <span className={styles.new}>{S.library.newEpisode}</span>}
         {pct > 0 && (
           <span className={styles.bar}>
             <span style={{ width: `${pct}%` }} />
