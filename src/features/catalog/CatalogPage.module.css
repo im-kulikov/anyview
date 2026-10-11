@@ -9,9 +9,49 @@
 }
 .head {
   display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 var(--gutter);
+}
+.headText {
+  display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 0 var(--gutter);
+  min-width: 0;
+}
+.tools {
+  display: flex;
+  gap: 8px;
+  flex: none;
+}
+.tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 44px;
+  height: 44px;
+  padding: 0 12px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--surface-3);
+  font-size: 15px;
+  font-weight: 600;
+}
+.tool:disabled {
+  opacity: 0.5;
+}
+.tool span {
+  display: none;
+}
+@media (min-width: 600px) {
+  .tool span {
+    display: inline;
+  }
+  .colsBtn {
+    display: none;
+  }
 }
 .head h1 {
   font-size: 28px;

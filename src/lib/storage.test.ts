@@ -60,7 +60,7 @@ test('битые элементы отбрасываются по одному, 
 
 test('prefs: поля проверяются по одному, громкость в [0,1] (CODE-02)', () => {
   mem.set('anyview:v1:prefs', JSON.stringify({ volume: 5, muted: 'yes', quality: 'hd' }));
-  expect(getPrefs()).toEqual({ quality: 'hd', autoNext: true, volume: 1, muted: false, speed: 1 });
+  expect(getPrefs()).toEqual({ quality: 'hd', autoNext: true, volume: 1, muted: false, speed: 1, cols: 3 });
   mem.set('anyview:v1:prefs', JSON.stringify({ speed: 3 }));
   expect(getPrefs().speed).toBe(1); // скорость вне списка допустимых → по умолчанию
   mem.set('anyview:v1:prefs', JSON.stringify({ speed: 1.5 }));

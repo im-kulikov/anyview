@@ -1,13 +1,15 @@
+import { useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { Clock, SearchX, Star } from 'lucide-react';
 import { useSearch, useUpdates } from '../../api/hooks';
-import type { TitleSummary } from '../../api/contract';
+import type { TitleFormat, TitleSummary } from '../../api/contract';
 import { Cover } from '../../components/Cover';
 import { ErrorState } from '../../components/ErrorState';
 import { PosterGrid } from '../../components/PosterGrid';
 import { Skeleton } from '../../components/Skeleton';
 import { S } from '../../lib/strings';
-import { cardMeta, ratingText } from '../../lib/format';
+import { cardMeta, formatShort, ratingText } from '../../lib/format';
+import { applyFilter, formatsOf, SORTS, type SortKey } from '../../lib/searchFilter';
 import { addRecentSearch, recentStore, useStore } from '../../lib/storage';
 import { useDebouncedValue } from '../../lib/useDebouncedValue';
 import { useDocumentTitle } from '../../lib/useDocumentTitle';
@@ -27,7 +29,20 @@ export function SearchPage() {
   const pick = (text: string) => setParams({ q: text }, { replace: true, preventScrollReset: true });
   const remember = () => addRecentSearch(q);
 
-  const items = search.data?.items;
+  const all = search.data?.items;
+  const formats = useMemo(() => formatsOf(all ?? []), [all]);
+  // Тип и сортировка живут в URL (ссылкой можно поделиться, «Назад» не ломается); неизвестные значения игнорируются.
+  const typeParam = params.get('type') as TitleFormat | null;
+  const type = formats.some((f) => f.format === typeParam) ? typeParam : null;
+  const sortParam = params.get('sort') as SortKey | null;
+  const sort: SortKey = sortParam && SORTS.includes(sortParam) ? sortParam : 'relevance';
+  const items = useMemo(() => (all ? applyFilter(all, type, sort) : undefined), [all, type, sort]);
+  const setFilter = (key: 'type' | 'sort', value: string | null) =>
+    setParams((p) => {
+      const n = new URLSearchParams(p);
+      if (value) n.set(key, value); else n.delete(key);
+      return n;
+    }, { replace: true, preventScrollReset: true });
   const popular = feed.data?.pages[0]?.items.slice(0, 8) ?? [];
 
   return (
@@ -35,14 +50,26 @@ export function SearchPage() {
       <div className={styles.head}>
         <div>
           <h1>{active ? S.searchPage.heading(q) : S.searchPage.title}</h1>
-          {active && items && <p className={styles.found}>{S.searchPage.found(items.length)}</p>}
+          {active && all && <p className={styles.found}>{S.searchPage.found(all.length)}</p>}
           {!active && <p className={styles.found}>{raw.trim().length === 1 ? S.searchPage.minChars : S.searchPage.popular}</p>}
         </div>
-        <div role="group" aria-label={S.searchPage.scope} className={styles.scope}>
-          <button type="button" aria-pressed="true" className={styles.on}>{S.searchPage.anime}</button>
-          <button type="button" disabled>{S.searchPage.seriesSoon}</button>
-          <button type="button" disabled>{S.searchPage.moviesSoon}</button>
-        </div>
+        {active && all && all.length > 1 && (
+          <div className={styles.filters}>
+            {formats.length > 1 && (
+              <div role="group" aria-label={S.searchPage.typeGroup} className={styles.scope}>
+                <button type="button" aria-pressed={!type} className={!type ? styles.on : ''} onClick={() => setFilter('type', null)}>{S.searchPage.allTypes}</button>
+                {formats.map(({ format, count }) => (
+                  <button key={format} type="button" aria-pressed={type === format} className={type === format ? styles.on : ''} onClick={() => setFilter('type', format)}>
+                    {formatShort(format)} {count}
+                  </button>
+                ))}
+              </div>
+            )}
+            <select aria-label={S.searchPage.sortLabel} value={sort} className={styles.sort} onChange={(e) => setFilter('sort', e.target.value === 'relevance' ? null : e.target.value)}>
+              {SORTS.map((k) => <option key={k} value={k}>{S.searchPage.sorts[k]}</option>)}
+            </select>
+          </div>
+        )}
       </div>
 
       {!active && recent.length > 0 && (

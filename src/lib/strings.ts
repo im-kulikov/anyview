@@ -99,8 +99,8 @@ export const S = {
     title: 'Поиск',
     scope: 'Где искать',
     anime: 'Аниме',
-    seriesSoon: 'Сериалы · скоро',
-    moviesSoon: 'Фильмы · скоро',
+    typeGroup: 'Тип', allTypes: 'Все', sortLabel: 'Сортировка',
+    sorts: { relevance: 'По релевантности', year: 'Сначала новые', rating: 'По рейтингу' },
     recent: 'Недавние запросы',
     recentInline: 'Недавние:',
     popular: 'Часто ищут',
@@ -152,5 +152,6 @@ export const S = {
       'Удалить данные из облака можно в любой момент на этой странице.',
     ],
   },
-  catalog: { title: 'Аниме', subtitle: (total: string, titles: string) => `Последние обновления · ${total} ${titles}` },
+  catalog: {
+    random: 'Случайное', randomLabel: 'Открыть случайный тайтл', cols2: 'Показывать по 2 в ряд', cols3: 'Показывать по 3 в ряд', title: 'Аниме', subtitle: (total: string, titles: string) => `Последние обновления · ${total} ${titles}` },
 } as const;

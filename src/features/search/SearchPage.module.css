@@ -30,14 +30,39 @@
   text-transform: uppercase;
   color: var(--text-3);
 }
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 0 var(--gutter) 12px;
+}
 .scope {
   display: flex;
   gap: 8px;
-  padding: 0 var(--gutter) 12px;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.scope::-webkit-scrollbar {
+  display: none;
+}
+.scope button {
+  flex: none;
+}
+.sort {
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
 }
 .scope button {
   position: relative;
-  height: 36px;
+  height: 44px;
   padding: 0 14px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: var(--radius-pill);
