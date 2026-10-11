@@ -3,9 +3,13 @@
   "short_name": "anyview",
   "description": "Аниме, сериалы и фильмы",
   "lang": "ru",
+  "id": "./",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "categories": ["entertainment", "video"],
   "background_color": "#131416",
   "theme_color": "#131416",
   "icons": [

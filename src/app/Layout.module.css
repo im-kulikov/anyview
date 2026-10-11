@@ -5,6 +5,9 @@
   flex-direction: column;
   /* 100vw включает полосу прокрутки: вылет ленты за контейнер не должен давать горизонтальный скролл. */
   overflow-x: clip;
+  /* Ландшафт на iPhone с вырезом: контент не заходит под него (в портрете и в браузере значения 0) */
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
 /* Место под фиксированную нижнюю панель (высота ≈ 76 px + safe area). */
 .app[data-nav='on'] {

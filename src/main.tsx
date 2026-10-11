@@ -12,6 +12,9 @@ import './styles/fonts.css';
 import './styles/tokens.css';
 import './styles/global.css';
 
+// iOS Safari включает :active (отклик на нажатие) только если на документе есть обработчик касания.
+document.addEventListener('touchstart', () => {}, { passive: true });
+
 // Лента стартует до первого рендера (SPEC §8); при повторном визите экран рисуется из снимка, пока идёт запрос.
 installDiagnostics();
 restoreFeed(queryClient);

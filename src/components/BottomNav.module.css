@@ -6,7 +6,7 @@
   z-index: 30;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+  padding: 8px max(8px, env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
   background: var(--surface-1);
   border-top: 1px solid var(--border);
 }
@@ -58,6 +58,47 @@
 .active .pill {
   background: var(--accent);
   color: var(--on-accent);
+}
+/* Точка «новые серии» на «Аккаунт»: цифра — сколько отслеживаемых тайтлов вышло вперёд. */
+.dot {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--radius-pill);
+  background: var(--star);
+  color: var(--bg);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  border: 2px solid var(--surface-1);
+  box-sizing: content-box;
+}
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.pill {
+  position: relative;
+  transition: transform 200ms ease-out, opacity 200ms ease-out;
+}
+@media (hover: none) {
+  .item:active .pill {
+    transform: scale(0.9);
+    opacity: 0.7;
+    transition-duration: 80ms;
+  }
+  .center:active .pill {
+    transform: scale(0.94);
+    opacity: 1;
+  }
 }
 @media (min-width: 1024px) {
   .nav {

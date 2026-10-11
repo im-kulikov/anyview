@@ -7,6 +7,9 @@ import { BottomNav } from '../components/BottomNav';
 import { useIsDesktop } from '../lib/useMediaQuery';
 import styles from './Layout.module.css';
 
+/** Корни вкладок нижней панели: прокрутка каждой хранится по пути, а не по записи истории — вернувшись на вкладку, оказываешься там, где ушёл. */
+const TAB_ROOTS = new Set(['/', '/anime', '/sync', '/series', '/movies']);
+
 export function Layout() {
   const isDesktop = useIsDesktop();
   const searchMode = useLocation().pathname === '/search';
@@ -18,7 +21,7 @@ export function Layout() {
       <Footer />
       <OfflineBanner />
       {showNav && <BottomNav />}
-      <ScrollRestoration />
+      <ScrollRestoration getKey={(loc) => (TAB_ROOTS.has(loc.pathname) ? loc.pathname : loc.key)} />
     </div>
   );
 }

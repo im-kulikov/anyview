@@ -204,7 +204,7 @@
   font-size: 13px;
 }
 .watch {
-  scroll-margin-top: 76px;
+  scroll-margin-top: calc(76px + env(safe-area-inset-top));
   display: flex;
   flex-direction: column;
   gap: 28px;

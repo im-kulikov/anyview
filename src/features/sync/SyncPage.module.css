@@ -31,7 +31,7 @@
   margin-top: 12px;
   padding-top: var(--section-gap);
   border-top: 1px solid var(--border-strong);
-  scroll-margin-top: 80px;
+  scroll-margin-top: calc(80px + env(safe-area-inset-top));
 }
 .syncBody {
   max-width: 560px;
