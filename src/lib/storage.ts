@@ -156,8 +156,9 @@ const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFin
 
 const listOf = <T>(ok: (x: unknown) => x is T) => (v: unknown): T[] | undefined => (Array.isArray(v) ? v.filter(ok) : undefined);
 
-const isSummary = (x: unknown): x is TitleSummary =>
-  isObj(x) && isStr(x.id) && isStr(x.name) && isStr(x.type) && isStr(x.format) && isStr(x.status);
+function isSummary(x: unknown): x is TitleSummary {
+  return isObj(x) && isStr(x.id) && isStr(x.name) && isStr(x.type) && isStr(x.format) && isStr(x.status);
+}
 const isHistory = (x: unknown): x is HistoryEntry =>
   isObj(x) && isSummary(x.title) && isStr(x.episodeId) && isStr(x.episodeName) && isNum(x.position) && isNum(x.duration) && isNum(x.updatedAt);
 const isProgress = (x: unknown): x is ProgressEntry =>
@@ -172,8 +173,11 @@ try {
 const parseProgress = (v: unknown): Record<string, ProgressEntry> | undefined =>
   isObj(v) ? Object.fromEntries(Object.entries(v).filter(([, e]) => isProgress(e))) as Record<string, ProgressEntry> : undefined;
 
+/** Допустимые скорости воспроизведения (кнопка под плеером переключает по кругу). */
+export const SPEEDS = [0.75, 1, 1.25, 1.5, 2] as const;
 const QUALITIES = ['auto', 'sd', 'hd'];
 export const clampVolume = (v: number) => Math.min(1, Math.max(0, v));
+export const DEFAULT_PREFS: Prefs = { quality: 'auto', autoNext: true, volume: 1, muted: false, speed: 1, cols: 3 };
 /** Поля проверяются по одному: битое поле заменяется значением по умолчанию. */
 const parsePrefs = (v: unknown): Prefs | undefined => {
   if (!isObj(v)) return undefined;
@@ -198,8 +202,6 @@ export interface HistoryEntry {
   duration: number;
   updatedAt: number;
 }
-/** Допустимые скорости воспроизведения (кнопка под плеером переключает по кругу). */
-export const SPEEDS = [0.75, 1, 1.25, 1.5, 2] as const;
 export interface Prefs { quality: 'auto' | 'sd' | 'hd'; autoNext: boolean; volume: number; muted: boolean; speed: number; cols: 2 | 3 }
 
 /** Метка избранного для слияния между устройствами: когда добавлено (`at`) или, при `del`, когда удалено («надгробие»). */
@@ -211,7 +213,6 @@ export type ListStatus = (typeof LIST_STATUSES)[number];
 /** Статус тайтла: `s: null` — «надгробие» (убран из списков; нужно слиянию, чтобы удаление не воскресало). `t` — снимок для показа без сети. */
 export interface StatusEntry { s: ListStatus | null; at: number; t?: TitleSummary }
 
-export const DEFAULT_PREFS: Prefs = { quality: 'auto', autoNext: true, volume: 1, muted: false, speed: 1, cols: 3 };
 export const LIMITS = { progress: 500, history: 50, favorites: 200, recent: 8, tombstones: 300, statuses: 300 };
 
 export const progressStore = createStore<Record<string, ProgressEntry>>('progress', {}, parseProgress);
