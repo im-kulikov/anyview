@@ -1,9 +1,11 @@
 import { useMemo } from 'react';
+import { Library } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router';
 import type { TitleSummary } from '../../api/contract';
 import { provider } from '../../api/index';
 import { ContinueCard } from '../../components/ContinueCard';
 import { PosterGrid } from '../../components/PosterGrid';
+import { SectionTitle } from '../../components/SectionTitle';
 import { favoritesStore, historyStore, LIST_STATUSES, statusesStore, useStore, type ListStatus } from '../../lib/storage';
 import { seasonsWord } from '../../lib/format';
 import { groupSeasons } from '../../lib/library';
@@ -39,7 +41,7 @@ export function LibrarySection() {
 
   return (
     <section className={styles.main} aria-labelledby="library-h">
-      <h2 id="library-h">{S.library.title}</h2>
+      <SectionTitle id="library-h" icon={Library}>{S.library.title}</SectionTitle>
       <nav aria-label={S.library.tabs} className={styles.tabs}>
         {TABS.map((t) => (
           <Link key={t} to={`/sync?tab=${t}`} replace aria-current={t === tab ? 'page' : undefined} className={styles.tab}>
