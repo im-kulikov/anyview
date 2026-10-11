@@ -18,6 +18,8 @@ export default tseslint.config(
     rules: {
       ...reactHooks.configs.recommended.rules,
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+      // Обращение к const до объявления (TDZ) падает только на части данных и не ловится типами: HomePage с историей из ≥ 2 записей.
+      '@typescript-eslint/no-use-before-define': ['error', { functions: false, classes: false, variables: true, typedefs: false, ignoreTypeReferences: true }],
     },
   },
   {

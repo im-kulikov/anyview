@@ -19,12 +19,11 @@ const LATEST = 12;
 export function HomePage() {
   useDocumentTitle();
   const q = useUpdates();
-  const allHistory = useStore(historyStore);
-  // записи с новой серией — первыми
-  const history = [...allHistory].sort((a, b) => Number(fresh2.has(b.title.id)) - Number(fresh2.has(a.title.id))).slice(0, 10);
   const favorites = useStore(favoritesStore);
   const hasStatuses = Object.values(useStore(statusesStore)).some((e) => e.s);
-  const fresh2 = useNewEpisodes();
+  const newEps = useNewEpisodes();
+  // записи с новой серией — первыми
+  const history = [...useStore(historyStore)].sort((a, b) => Number(newEps.has(b.title.id)) - Number(newEps.has(a.title.id))).slice(0, 10);
   // Одна лента на главной и на /anime; для главной берём только первую страницу.
   const first = q.data?.pages[0]?.items;
   const fresh = (first ?? []).filter((t) => t.status === 'ongoing' && t.latestEpisode).slice(0, FRESH);
@@ -59,11 +58,11 @@ export function HomePage() {
           <SectionHeader title={S.home.continue} />
           <div className={styles.continueRail}>
             <Rail>
-              {history.map((h) => <ContinueCard key={h.title.id} entry={h} isNew={fresh2.has(h.title.id)} className={styles.continueCard} />)}
+              {history.map((h) => <ContinueCard key={h.title.id} entry={h} isNew={newEps.has(h.title.id)} className={styles.continueCard} />)}
             </Rail>
           </div>
           <ul className={styles.continueGrid}>
-            {history.map((h) => <li key={h.title.id}><ContinueCard entry={h} isNew={fresh2.has(h.title.id)} /></li>)}
+            {history.map((h) => <li key={h.title.id}><ContinueCard entry={h} isNew={newEps.has(h.title.id)} /></li>)}
           </ul>
         </section>
       )}
