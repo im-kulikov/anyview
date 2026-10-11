@@ -16,6 +16,7 @@ export default defineConfig({
   use: {
     baseURL: process.env.E2E_BASE_URL ?? 'http://127.0.0.1:4173',
     trace: 'retain-on-failure',
+    serviceWorkers: 'block', // герметичный мок (page.route) не видит запросы, прошедшие через SW; воркер проверяет e2e/sw.e2e.ts
     launchOptions: process.env.E2E_CHROMIUM ? { executablePath: process.env.E2E_CHROMIUM } : {},
   },
   // E2E_BASE_URL (origin живого сайта) — проверка после деплоя: локальный preview не нужен

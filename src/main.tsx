@@ -8,6 +8,7 @@ import { updatesQuery } from './api/hooks';
 import { persistFeed, restoreFeed } from './api/feedCache';
 import { watchFeedFreshness } from './api/refresh';
 import { watchUpdates } from './lib/update';
+import { registerSw } from './lib/sw';
 import { installDiagnostics } from './app/diagnostics';
 import './styles/fonts.css';
 import './styles/tokens.css';
@@ -22,6 +23,7 @@ restoreFeed(queryClient);
 persistFeed(queryClient);
 watchFeedFreshness(queryClient);
 watchUpdates();
+registerSw();
 void queryClient.prefetchInfiniteQuery(updatesQuery());
 // Синхронизация (ADR-28): только если пользователь уже входил на этом устройстве; код грузится отдельным чанком после первой отрисовки.
 try {

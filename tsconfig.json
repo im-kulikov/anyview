@@ -14,5 +14,6 @@
     "noEmit": true,
     "types": ["vite/client"]
   },
-  "include": ["src", "config", "vite.config.ts"]
+  "include": ["src", "config", "vite.config.ts"],
+  "exclude": ["src/sw"]
 }

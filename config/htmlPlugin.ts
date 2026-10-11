@@ -38,6 +38,7 @@ export function csp(env: Env): string {
     "media-src https: blob:",
     "font-src 'self'",
     "manifest-src 'self'",
+    "worker-src 'self'", // service worker оболочки (ADR-39)
     "base-uri 'self'",
     "form-action 'none'",
     "object-src 'none'",
