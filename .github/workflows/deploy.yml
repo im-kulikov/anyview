@@ -30,6 +30,18 @@ jobs:
       - run: npm run build
       - name: Бюджет стартового JS
         run: node scripts/check-budget.mjs
+      - name: E2E-smoke на собранном сайте (ADR-32)
+        run: |
+          npx playwright install --with-deps chromium
+          npm run e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: e2e-report
+          path: |
+            playwright-report
+            test-results
+          retention-days: 7
       - name: Прямые ссылки для SPA
         run: |
           cd dist
@@ -45,6 +57,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
+      contents: read
       pages: write
       id-token: write
     environment:
@@ -58,3 +71,16 @@ jobs:
           for p in "" anime search sync library manifest.webmanifest fonts/exo2-cyrillic.woff2; do
             curl -fsS --retry 5 --retry-delay 5 -o /dev/null "${{ steps.deployment.outputs.page_url }}$p"
           done
+      # Рендер на живом сайте (сеть подменена): ловит то, чего не видит curl — падение экранов на данных. Красный шаг = тревога, откат — вручную (docs/STATUS.md).
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Smoke на боевом URL
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          E2E_BASE_URL="$(echo "$PAGE_URL" | sed -E 's#(https?://[^/]+).*#\1#')" npx playwright test --grep "history2 /$|corrupt /library$|full /library\?tab=watching$|empty /anime$"
