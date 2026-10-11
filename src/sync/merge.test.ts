@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import type { TitleSummary } from '../api/contract';
-import { LIMITS, parseLocalData, type HistoryEntry, type LocalData } from '../lib/storage';
+import { LIMITS, parseLocalData, type StatusEntry, type HistoryEntry, type LocalData } from '../lib/storage';
 import { canonical, CLOUD_MAX_BYTES, EMPTY, fitForCloud, mergeData, normalize, sameData, serialize } from './merge';
 
 const title = (id: string, name = id): TitleSummary => ({ id, name, type: 'anime', format: 'tv', status: 'ongoing' }) as TitleSummary;
@@ -127,7 +127,14 @@ function randomState(r: () => number): LocalData {
       favMeta[`f${f}`] = { at: 1 + pick(6) };
     } else if (x < 0.7) favMeta[`f${f}`] = { at: 1 + pick(6), del: true };
   }
-  return { progress, history, favorites, favMeta };
+  const statuses: LocalData['statuses'] = {};
+  for (let t = 0; t < 4; t++) {
+    const x = r();
+    const at = 1 + pick(6);
+    if (x < 0.4) statuses[`t${t}`] = { s: (['watching', 'done', 'planned'] as const)[pick(3)], at, t: title(`t${t}`, `n${pick(2)}`) };
+    else if (x < 0.6) statuses[`t${t}`] = { s: null, at };
+  }
+  return { progress, history, favorites, favMeta, statuses };
 }
 
 describe('свойства слияния', () => {
@@ -163,10 +170,44 @@ describe('свойства слияния', () => {
   });
 });
 
+describe('статусы списков', () => {
+  const st = (s: StatusEntry['s'], at: number): StatusEntry => (s ? { s, at, t: title('t') } : { s: null, at });
+
+  test('по тайтлу побеждает более поздняя запись, в том числе «надгробие»', () => {
+    const m = mergeData(data({ statuses: { t: st('watching', 5), u: st('planned', 1) } }), data({ statuses: { t: st(null, 9), v: st('done', 2) } }));
+    expect(m.statuses.t).toEqual({ s: null, at: 9 });
+    expect(Object.keys(m.statuses).sort()).toEqual(['t', 'u', 'v']);
+  });
+
+  test('«надгробие» старше нового статуса не воскрешает старое и не перетирает новое', () => {
+    const m = mergeData(data({ statuses: { t: st(null, 3) } }), data({ statuses: { t: st('done', 7) } }));
+    expect(m.statuses.t.s).toBe('done');
+  });
+
+  test('лимиты: живых ≤ LIMITS.statuses, «надгробий» ≤ LIMITS.tombstones, свежие остаются', () => {
+    const live = Object.fromEntries(Array.from({ length: 320 }, (_, i) => [`l${i}`, { s: 'planned' as const, at: i + 1, t: title(`l${i}`) }]));
+    const dead = Object.fromEntries(Array.from({ length: 320 }, (_, i) => [`d${i}`, st(null, i + 1)]));
+    const n = normalize(data({ statuses: { ...live, ...dead } }));
+    expect(Object.values(n.statuses).filter((e) => e.s).length).toBe(LIMITS.statuses);
+    expect(Object.values(n.statuses).filter((e) => !e.s).length).toBe(LIMITS.tombstones);
+    expect(n.statuses.l0).toBeUndefined();
+    expect(n.statuses.l319).toBeDefined();
+  });
+
+  test('облако из старой версии (без statuses) читается как пустые статусы', () => {
+    expect(parseLocalData({ progress: {}, history: [], favorites: [], favMeta: {} })?.statuses).toEqual({});
+  });
+
+  test('битые записи отбрасываются по одной', () => {
+    const d = parseLocalData({ statuses: { a: { s: 'bogus', at: 1 }, b: { s: 'done', at: 1 }, c: { s: 'done', at: 1, t: title('c') }, d: { s: null, at: 2 } } });
+    expect(Object.keys(d?.statuses ?? {}).sort()).toEqual(['c', 'd']);
+  });
+});
+
 describe('сериализация и размер', () => {
   test('сериализация канонична и переживает разбор', () => {
     const d = data({ progress: { e1: prog('t', 1, 2) }, favorites: [title('a')], favMeta: { a: { at: 3 } } });
-    const reordered = { favMeta: d.favMeta, favorites: d.favorites, history: d.history, progress: { e1: { updatedAt: 2, duration: 100, position: 1, titleId: 't' } } };
+    const reordered = { statuses: d.statuses, favMeta: d.favMeta, favorites: d.favorites, history: d.history, progress: { e1: { updatedAt: 2, duration: 100, position: 1, titleId: 't' } } };
     expect(serialize(d)).toBe(serialize(reordered));
     const back = parseLocalData(JSON.parse(serialize(d)));
     expect(back && sameData(back, d)).toBe(true);

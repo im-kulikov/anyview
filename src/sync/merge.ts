@@ -1,4 +1,4 @@
-import { isWatched, LIMITS, pruneFavMeta, type FavMeta, type HistoryEntry, type LocalData, type ProgressEntry } from '../lib/storage';
+import { isWatched, LIMITS, pruneFavMeta, pruneStatuses, type FavMeta, type StatusEntry, type HistoryEntry, type LocalData, type ProgressEntry } from '../lib/storage';
 import type { TitleSummary } from '../api/contract';
 
 /**
@@ -7,7 +7,7 @@ import type { TitleSummary } from '../api/contract';
  * Равные метки времени разрешаются сравнением канонического JSON, а не порядком аргументов.
  */
 
-export const EMPTY: LocalData = { progress: {}, history: [], favorites: [], favMeta: {} };
+export const EMPTY: LocalData = { progress: {}, history: [], favorites: [], favMeta: {}, statuses: {} };
 
 /** Правила Firestore требуют `data.size() < 200000`; берём запас и считаем в байтах UTF-8. */
 export const CLOUD_MAX_BYTES = 190_000;
@@ -85,9 +85,19 @@ function mergeFavorites(a: LocalData, b: LocalData): Pick<LocalData, 'favorites'
   return { favorites, favMeta: pruneFavMeta(meta, favorites) };
 }
 
+/** Статусы: по тайтлу побеждает более поздняя запись (в том числе «надгробие»); при равенстве — большая по каноническому JSON. */
+function mergeStatuses(a: LocalData['statuses'], b: LocalData['statuses']): LocalData['statuses'] {
+  const out: Record<string, StatusEntry> = { ...a };
+  for (const [id, e] of Object.entries(b)) {
+    const cur = out[id];
+    out[id] = !cur ? e : cur.at !== e.at ? (cur.at > e.at ? cur : e) : canonical(cur) >= canonical(e) ? cur : e;
+  }
+  return pruneStatuses(out);
+}
+
 export function mergeData(a: LocalData, b: LocalData): LocalData {
   const progress = mergeProgress(a.progress, b.progress);
-  return { progress, history: mergeHistory(a.history, b.history, progress), ...mergeFavorites(a, b) };
+  return { progress, history: mergeHistory(a.history, b.history, progress), ...mergeFavorites(a, b), statuses: mergeStatuses(a.statuses, b.statuses) };
 }
 
 /** Приведение одного состояния к инвариантам (лимиты, одна запись на тайтл, правила досмотра). */
@@ -111,6 +121,8 @@ export function fitForCloud(d: LocalData, max = CLOUD_MAX_BYTES): LocalData {
       for (const e of cur.history) items.push({ t: e.updatedAt, k: 'h:' + e.title.id });
     } else {
       for (const [id, m] of Object.entries(cur.favMeta)) if (m.del) items.push({ t: m.at, k: 'm:' + id });
+      for (const [id, e] of Object.entries(cur.statuses)) if (e.s === null) items.push({ t: e.at, k: 's:' + id });
+      if (!items.length) for (const [id, e] of Object.entries(cur.statuses)) items.push({ t: e.at, k: 's:' + id });
       if (!items.length) for (const t of cur.favorites) items.push({ t: cur.favMeta[t.id]?.at ?? 0, k: 'f:' + t.id });
     }
     if (!items.length) return cur; // резать нечего
@@ -121,6 +133,7 @@ export function fitForCloud(d: LocalData, max = CLOUD_MAX_BYTES): LocalData {
       history: cur.history.filter((e) => !gone.has('h:' + e.title.id)),
       favorites: cur.favorites.filter((t) => !gone.has('f:' + t.id)),
       favMeta: Object.fromEntries(Object.entries(cur.favMeta).filter(([id]) => !gone.has('m:' + id) && !gone.has('f:' + id))),
+      statuses: Object.fromEntries(Object.entries(cur.statuses).filter(([id]) => !gone.has('s:' + id))),
     };
   }
   return cur;

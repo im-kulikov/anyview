@@ -12,6 +12,7 @@ import { EpisodeList } from '../player/EpisodeList';
 import { pickEpisode } from '../player/pickEpisode';
 import { isResumable } from '../player/playerModel';
 import { ExpandableText } from './ExpandableText';
+import { ListSelect } from './ListSelect';
 import { SeasonsBlock, SimilarBlock } from './RelatedBlocks';
 import { S } from '../../lib/strings';
 import { episodesText, formatLong, statusLabel, votesWord, formatNumber } from '../../lib/format';
@@ -149,6 +150,7 @@ function TitleBody({ title, episodes, episodesPending }: { title: Title; episode
                 <Heart size={20} fill={fav ? 'currentColor' : 'none'} aria-hidden="true" />
                 <span>{fav ? S.title.favorited : S.title.favorite}</span>
               </button>
+              <ListSelect title={title} className={styles.list} />
             </div>
 
             <section className={styles.about}>

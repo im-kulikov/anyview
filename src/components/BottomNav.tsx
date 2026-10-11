@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router';
-import { Cloud, Film, House, Sparkles, Tv } from 'lucide-react';
+import { Bookmark, Clapperboard, Cloud, House, Sparkles } from 'lucide-react';
 import { S } from '../lib/strings';
 import styles from './BottomNav.module.css';
 
@@ -8,21 +8,22 @@ const ITEMS = [
   { to: '/', label: S.nav.home, Icon: House, end: true },
   { to: '/anime', label: S.nav.anime, Icon: Sparkles },
   { to: '/sync', label: S.nav.sync, Icon: Cloud, center: true },
-  { to: '/series', label: S.nav.series, Icon: Tv },
-  { to: '/movies', label: S.nav.movies, Icon: Film },
+  { to: '/library', label: S.nav.library, Icon: Bookmark },
+  { to: '/series', label: S.nav.soon, Icon: Clapperboard, also: '/movies' },
 ];
 
 export function BottomNav() {
-  const onTitle = useLocation().pathname.startsWith('/title/');
+  const path = useLocation().pathname;
+  const onTitle = path.startsWith('/title/');
   return (
     <nav aria-label={S.nav.sections} className={styles.nav}>
-      {ITEMS.map(({ to, label, Icon, end, center }) => (
+      {ITEMS.map(({ to, label, Icon, end, center, also }) => (
         <NavLink
           key={to}
           to={to}
           end={end}
           className={({ isActive }) =>
-            `${styles.item} ${center ? styles.center : ''} ${isActive || (onTitle && to === '/anime') ? styles.active : ''}`
+            `${styles.item} ${center ? styles.center : ''} ${isActive || (onTitle && to === '/anime') || (!!also && path === also) ? styles.active : ''}`
           }
         >
           <span className={styles.pill}>

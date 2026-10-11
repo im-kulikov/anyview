@@ -13,7 +13,8 @@ import { EMPTY, fitForCloud, mergeData, serialize } from './merge';
  * ID-токены нигде не сохраняются и не логируются: токен живёт в замыкании callback до вызова `signInWithCredential`.
  */
 
-const SCHEMA = 1;
+// 2: добавлены статусы списков (LocalData.statuses). Старые клиенты (SCHEMA 1) на документе v2 получают SchemaError и ничего не затирают.
+const SCHEMA = 2;
 const GIS_SRC = 'https://accounts.google.com/gsi/client';
 
 export interface CloudUser { name: string | null; email: string | null }

@@ -6,7 +6,7 @@ vi.stubGlobal('localStorage', {
   setItem: (k: string, v: string) => void mem.set(k, v),
 });
 
-const { migrate, SCHEMA_VERSION, feedStore, getPrefs, DEFAULT_PREFS, saveProgress,historyStore, progressStore, toggleFavorite, favoritesStore, addRecentSearch, recentStore, resetProgress, MIGRATIONS, batch, favoritesMetaStore, readLocal, writeLocal, subscribeLocal } = await import('./storage');
+const { migrate, SCHEMA_VERSION, feedStore, getPrefs, DEFAULT_PREFS, saveProgress,historyStore, progressStore, toggleFavorite, favoritesStore, addRecentSearch, recentStore, resetProgress, MIGRATIONS, batch, favoritesMetaStore, readLocal, writeLocal, subscribeLocal, setStatus, statusesStore } = await import('./storage');
 
 const title = { id: 'av-1', type: 'anime', format: 'tv', name: 'T', status: 'ongoing' } as never;
 const ep = (n: number) => ({ id: `e${n}`, titleId: 'av-1', season: 1, number: n, name: `${n} серия`, available: true });
@@ -139,7 +139,7 @@ test('миграция 1 → 2: метки для уже добавленног�
 });
 
 test('избранное хранит метки: добавление, «надгробие» при удалении', () => {
-  writeLocal({ progress: {}, history: [], favorites: [], favMeta: {} }); // предыдущие тесты могли оставить хранилище в режиме памяти
+  writeLocal({ progress: {}, history: [], favorites: [], favMeta: {}, statuses: {} }); // предыдущие тесты могли оставить хранилище в режиме памяти
   toggleFavorite(title);
   expect(favoritesMetaStore.get()['av-1']).toMatchObject({ at: expect.any(Number) });
   expect(favoritesMetaStore.get()['av-1'].del).toBeUndefined();
@@ -178,6 +178,19 @@ test('batch: подписчики уведомляются один раз по�
   calls = 0;
   writeLocal({ ...readLocal(), progress: {}, history: [], favorites: [], favMeta: {} });
   expect(calls).toBe(1);
-  expect(readLocal()).toEqual({ progress: {}, history: [], favorites: [], favMeta: {} });
+  expect(readLocal()).toEqual({ progress: {}, history: [], favorites: [], favMeta: {}, statuses: {} });
   off();
+});
+
+test('setStatus: статус, смена, «надгробие» при снятии; повтор того же статуса не пишет', () => {
+  writeLocal({ progress: {}, history: [], favorites: [], favMeta: {}, statuses: {} });
+  setStatus(title, 'planned');
+  expect(statusesStore.get()['av-1']).toMatchObject({ s: 'planned', t: { id: 'av-1' } });
+  const at = statusesStore.get()['av-1'].at;
+  setStatus(title, 'planned');
+  expect(statusesStore.get()['av-1'].at).toBe(at);
+  setStatus(title, 'done');
+  expect(statusesStore.get()['av-1'].s).toBe('done');
+  setStatus(title, null);
+  expect(statusesStore.get()['av-1']).toEqual({ s: null, at: expect.any(Number) });
 });
