@@ -5,7 +5,7 @@
 }
 html {
   -webkit-text-size-adjust: 100%;
-  background: var(--bg-deep);
+  background: var(--bg); /* тот же цвет, что у страницы: за краем при «резинке» и в первом кадре нет другого оттенка */
 }
 body {
   margin: 0;
@@ -37,6 +37,36 @@ select {
 img {
   display: block;
   max-width: 100%;
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+}
+
+/* Касание как в приложении (iOS): без задержки и зума двойным тапом на интерфейсе (пинч-зум не затронут), без выделения
+   и меню при долгом нажатии на кнопках, ссылках и карточках. Текст описаний, поля ввода и абзацы не трогаем. */
+a,
+button,
+summary,
+select,
+label,
+[role='button'] {
+  touch-action: manipulation;
+}
+a,
+button,
+summary {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+/* Отклик на нажатие только на сенсорных устройствах (на десктопе есть :hover). */
+@media (hover: none) {
+  button:not(:disabled) {
+    transition: transform 200ms ease-out;
+  }
+  button:not(:disabled):active {
+    transform: scale(0.96);
+    transition-duration: 80ms;
+  }
 }
 :focus-visible {
   outline: 2px solid #fff;

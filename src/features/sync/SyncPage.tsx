@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Check, Cloud, CloudCheck, CloudOff } from 'lucide-react';
+import { InstallHint } from '../../components/InstallHint';
 import { SectionTitle } from '../../components/SectionTitle';
+import { isStandalone } from '../../lib/standalone';
 import { S } from '../../lib/strings';
 import { LibrarySection } from '../library/LibrarySection';
 import { rowKind } from './accountStatus';
@@ -51,6 +53,8 @@ export function SyncPage() {
             )}
           </p>
         )}
+
+        <InstallHint />
 
         <LibrarySection />
 
@@ -125,6 +129,8 @@ export function SyncPage() {
                     </div>
                   )}
                 </div>
+
+                {!st.user && isStandalone() && <p className={styles.hint}>{S.sync.standaloneNote}</p>}
 
                 <div className={styles.card} role="group" aria-labelledby="sync-what">
                   <h3 id="sync-what">{S.sync.what}</h3>

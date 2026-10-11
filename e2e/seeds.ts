@@ -48,6 +48,14 @@ export const seeds: Record<string, Seed> = {
     ]),
     'anyview:v1:favoritesMeta': JSON.stringify({ 'av-1': { at: 1 }, 'av-2': { at: 2 }, 'av-3': { at: 3 }, 'av-4': { at: 4 } }),
   },
+  // отслеживаемый тайтл av-4000 (в ленте у него вышло больше серий, чем в снимке): на «Аккаунт» должна появиться точка «новые серии»
+  newEpisode: {
+    'anyview:schema': '2',
+    'anyview:v1:history': JSON.stringify([{
+      title: { id: 'av-4000', type: 'anime', format: 'tv', name: 'Токийские мстители', year: 2026, status: 'ongoing', latestEpisode: { number: 1, label: '1 серия' } },
+      episodeId: 'av-4000-i0', episodeName: '1 серия', position: 100, duration: 1400, updatedAt: NOW,
+    }]),
+  },
   // данные до версионирования: нет ключа схемы, нет favoritesMeta
   legacyV1: {
     'anyview:v1:history': JSON.stringify(historyOf(3)),

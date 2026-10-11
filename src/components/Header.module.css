@@ -5,7 +5,8 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px var(--gutter);
+  /* Установленное приложение iOS: страница рисуется под строкой состояния, шапка отступает на вырез; в браузере inset = 0 */
+  padding: calc(12px + env(safe-area-inset-top)) var(--gutter) 12px;
   background: var(--bg);
   border-bottom: 1px solid var(--border);
 }

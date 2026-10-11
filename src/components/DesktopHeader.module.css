@@ -32,8 +32,10 @@
   font-weight: 500;
   color: var(--text-nav);
 }
-.link:hover {
-  background: var(--surface-5);
+@media (hover: hover) {
+  .link:hover {
+    background: var(--surface-5);
+  }
 }
 .link.active {
   background: var(--accent);
@@ -65,8 +67,10 @@
   border-radius: var(--radius-pill);
   color: var(--text-nav);
 }
-.icon:hover {
-  background: var(--surface-5);
+@media (hover: hover) {
+  .icon:hover {
+    background: var(--surface-5);
+  }
 }
 .icon.active {
   background: var(--accent);
