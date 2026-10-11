@@ -42,7 +42,7 @@ export function SearchField({ active }: { active: boolean }) {
     window.clearTimeout(timer.current);
     const url = `/search${q ? `?q=${encodeURIComponent(q)}` : ''}`;
     // Первый переход — в историю (чтобы «Назад» вернул на предыдущий экран), дальше — replace.
-    navigate(url, { replace: isSearch, preventScrollReset: isSearch, state: { fromField: true } });
+    void navigate(url, { replace: isSearch, preventScrollReset: isSearch, state: { fromField: true } });
   };
 
   const goLater = (q: string) => {

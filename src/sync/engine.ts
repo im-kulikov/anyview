@@ -38,7 +38,7 @@ export const subscribeSyncState = (cb: () => void): (() => void) => {
   return () => listeners.delete(cb);
 };
 
-const flag = {
+export const flag = {
   get: () => {
     try {
       return localStorage.getItem(FLAG_KEY) === '1';

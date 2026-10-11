@@ -204,6 +204,15 @@ describe('статусы списков', () => {
   });
 });
 
+describe('совместимость со старым облаком', () => {
+  test('облако без поля statuses (schema 1): локальные статусы не теряются, слияние не бросает', () => {
+    const cloud = parseLocalData({ progress: {}, history: [], favorites: [], favMeta: {} })!;
+    const local = data({ statuses: { t: { s: 'watching', at: 5, t: title('t') } } });
+    expect(mergeData(cloud, local).statuses.t.s).toBe('watching');
+    expect(mergeData(local, cloud).statuses.t.s).toBe('watching');
+  });
+});
+
 describe('сериализация и размер', () => {
   test('сериализация канонична и переживает разбор', () => {
     const d = data({ progress: { e1: prog('t', 1, 2) }, favorites: [title('a')], favMeta: { a: { at: 3 } } });

@@ -107,8 +107,11 @@ const FORMATS: Record<string, TitleFormat> = {
   'спешл': 'special',
 };
 
+/** Поля чужого API не всегда строки: нестроковое значение считается отсутствующим. */
+export const str = (v: unknown): string => (typeof v === 'string' ? v : '');
+
 export const formatOf = (type?: string): TitleFormat =>
-  FORMATS[(type ?? '').trim().toLowerCase()] ?? 'unknown';
+  FORMATS[str(type).trim().toLowerCase()] ?? 'unknown';
 
 const ENTITIES: Record<string, string> = {
   nbsp: ' ', amp: '&', lt: '<', gt: '>', quot: '"', laquo: '«', raquo: '»',
@@ -119,8 +122,8 @@ const codePoint = (cp: number, fallback: string) =>
   Number.isInteger(cp) && cp > 0 && cp <= 0x10ffff && !(cp >= 0xd800 && cp <= 0xdfff) ? String.fromCodePoint(cp) : fallback;
 
 /** HTML описания → плоский текст без DOM. */
-export function htmlToText(html: string): string {
-  return html
+export function htmlToText(input: string): string {
+  return str(input)
     .replace(/\r\n?/g, '\n')
     .replace(/<br\s*\/?>[ \t]*\n?/gi, '\n')
     .replace(/<\/(?:p|div|li|h[1-6]|tr)\s*>/gi, '\n') // конец блока — перенос строки
@@ -144,7 +147,7 @@ export function ratingOf(rating: unknown, votes: unknown): Rating | undefined {
 }
 
 export function genresOf(genre?: string): Tag[] {
-  return (genre ?? '')
+  return str(genre)
     .split(',')
     .map((g) => g.trim())
     .filter(Boolean)
@@ -160,7 +163,7 @@ const imageOf = (url: string | null | undefined, base: string = IMAGE_ORIGIN): I
 export const posterOf = (raw: RawItem): Image | undefined => imageOf(raw.urlImagePreview);
 
 export function backdropOf(raw: RawItem): Image | undefined {
-  const path = (raw.screenImage ?? []).find((s) => typeof s === 'string' && s.trim());
+  const path = (Array.isArray(raw.screenImage) ? raw.screenImage : []).find((s) => typeof s === 'string' && s.trim());
   if (!path) return undefined;
   return imageOf(path, posterOf(raw)?.url);
 }

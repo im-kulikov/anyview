@@ -156,8 +156,18 @@ const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFin
 
 const listOf = <T>(ok: (x: unknown) => x is T) => (v: unknown): T[] | undefined => (Array.isArray(v) ? v.filter(ok) : undefined);
 
+/** Снимок тайтла: вложенные поля проверяются тоже (иначе `rating: {}` из старой версии или облака роняет экран при `toFixed`). Негодный элемент отбрасывается целиком. */
 function isSummary(x: unknown): x is TitleSummary {
-  return isObj(x) && isStr(x.id) && isStr(x.name) && isStr(x.type) && isStr(x.format) && isStr(x.status);
+  if (!(isObj(x) && isStr(x.id) && isStr(x.name) && isStr(x.type) && isStr(x.format) && isStr(x.status))) return false;
+  const opt = (v: unknown, ok: (v: unknown) => boolean) => v === undefined || ok(v);
+  return (
+    opt(x.originalName, isStr) &&
+    opt(x.year, isNum) &&
+    opt(x.poster, (v) => isObj(v) && isStr(v.url)) &&
+    opt(x.rating, (v) => isObj(v) && isNum(v.value)) &&
+    opt(x.episodes, (v) => isObj(v) && isNum(v.released)) &&
+    opt(x.latestEpisode, (v) => isObj(v) && isNum(v.number))
+  );
 }
 const isHistory = (x: unknown): x is HistoryEntry =>
   isObj(x) && isSummary(x.title) && isStr(x.episodeId) && isStr(x.episodeName) && isNum(x.position) && isNum(x.duration) && isNum(x.updatedAt);
@@ -342,6 +352,15 @@ export function setStatus(t: TitleSummary | Title, s: ListStatus | null) {
   const cur = statusesStore.get()[t.id];
   if ((cur?.s ?? null) === s) return;
   statusesStore.set(pruneStatuses({ ...statusesStore.get(), [t.id]: s ? { s, at: Date.now(), t: toSnapshot(t) } : { s: null, at: Date.now() } }));
+}
+
+/** Сброс локальных данных этого устройства (кнопка на экране ошибки). Ключ схемы остаётся; при включённой синхронизации данные вернутся из облака. */
+export function resetLocalData(): void {
+  try {
+    for (const k of Object.keys(localStorage)) if (k.startsWith('anyview:v1:')) localStorage.removeItem(k);
+  } catch {
+    /* localStorage недоступен */
+  }
 }
 
 export function addRecentSearch(q: string) {

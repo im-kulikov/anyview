@@ -4,13 +4,14 @@ import {
 } from '../../contract';
 import type { ContentProvider } from '../../provider';
 import { https } from '../../../lib/https';
+import { report } from '../../../lib/report';
 import { createClient, form } from './client';
 import { lastPath, MAX_PAGE } from './urls';
 import { ANILIST, ANILIST_QUERY, pickShikimori, SHIKIMORI, toDetails, type AniListMedia, type ShikiAnime, type ShikiListItem } from './details';
 import { REQUEST_TIMEOUT_MS } from './client';
 import { classifyRelated, normTitle, relatedQuery } from './related';
 import {
-  backdropOf, episodesOf, formatOf, genresOf, htmlToText, parseTitle, posterOf, ratingOf,
+  backdropOf, episodesOf, str, formatOf, genresOf, htmlToText, parseTitle, posterOf, ratingOf,
   sortPlaylist, statusOf,
   type RawItem, type RawPlaylistItem,
 } from './parse';
@@ -57,6 +58,18 @@ const rawIdOf = (id: string): string => {
   return m[1];
 };
 
+/** Элементы ленты превращаются в карточки по одному: чужой API не гарантирует форму полей, один плохой элемент не должен ронять всю страницу. */
+export function summariesOf(data: RawItem[], now = new Date()): TitleSummary[] {
+  return data.flatMap((r) => {
+    try {
+      return [toSummary(r, now)];
+    } catch (e) {
+      report(e, 'animevost:item');
+      return [];
+    }
+  });
+}
+
 export function toSummary(raw: RawItem, now = new Date()): TitleSummary {
   const p = parseTitle(raw.title, now);
   const format = formatOf(raw.type);
@@ -94,7 +107,7 @@ export function toTitle(raw: RawItem, now = new Date()): Title {
     genres: genresOf(raw.genre),
     tags: [],
     ratings: summary.rating ? [summary.rating] : [],
-    credits: { directors: raw.director?.trim() ? [raw.director.trim()] : [], studios: [] },
+    credits: { directors: str(raw.director).trim() ? [str(raw.director).trim()] : [], studios: [] },
     voiceovers: ['AnimeVost'],
     ...(p.nextEpisode && { nextEpisode: p.nextEpisode }),
     externalIds: { animevost: String(raw.id) },
@@ -209,7 +222,7 @@ export function createAnimevostProvider(bases: string[]): ContentProvider {
       const total = Number.isFinite(count) ? count : undefined;
       const now = new Date();
       return {
-        items: data.map((r) => toSummary(r, now)),
+        items: summariesOf(data, now),
         page,
         pageSize: size,
         ...(total !== undefined && { total }),
@@ -219,9 +232,13 @@ export function createAnimevostProvider(bases: string[]): ContentProvider {
 
     async title(id, signal) {
       const rawId = rawIdOf(id);
-      const hit = rawCache.get(rawId);
-      if (hit) return toTitle(hit);
-      return toTitle(await loadRaw(rawId, signal));
+      const raw = rawCache.get(rawId) ?? (await loadRaw(rawId, signal));
+      try {
+        return toTitle(raw);
+      } catch (e) {
+        report(e, 'animevost:title');
+        throw new ApiError('parse', 'Некорректный ответ API');
+      }
     },
 
     async episodes(titleId, signal): Promise<Season[]> {
@@ -302,7 +319,7 @@ export function createAnimevostProvider(bases: string[]): ContentProvider {
       const data = body.data.filter(usable);
       remember(data);
       const now = new Date();
-      const items = data.map((r) => toSummary(r, now));
+      const items = summariesOf(data, now);
       return { items, page: 1, pageSize: items.length, total: items.length, hasMore: false };
     },
 
@@ -314,6 +331,7 @@ export function createAnimevostProvider(bases: string[]): ContentProvider {
       const cur = await self.title(id, signal);
       const names = [cur.originalName, cur.name].filter((n): n is string => !!n);
       const none: TitleDetails = { genres: [], studios: [], characters: [], providers: [] };
+      if (!names.length) return none; // без названия искать нечего: запрос «undefined» дал бы чужое совпадение
       const list = await extJson<ShikiListItem[]>(`${SHIKIMORI}/animes?limit=10&search=${encodeURIComponent(names[0])}`, undefined, signal);
       const hit = Array.isArray(list) ? pickShikimori(list, names, cur.year) : undefined;
       if (!hit) return none;

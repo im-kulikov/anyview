@@ -32,3 +32,12 @@ describe('pickEpisode', () => {
   test('«последняя просмотренная» — по порядку в списке, а не по времени (CODE-22)', () =>
     expect(pickEpisode(eps, null, { e1: pr(95, 99), e2: pr(95, 1) })?.id).toBe('e3'));
 });
+
+describe('длинные тайтлы (300+ серий)', () => {
+  const long = Array.from({ length: 320 }, (_, i) => ep(i + 1));
+  test('?episode= на несуществующий id — первая доступная', () => expect(pickEpisode(long, 'zzz', {})?.id).toBe('e1'));
+  test('после просмотренной 300-й — 301-я', () => expect(pickEpisode(long, null, { e300: pr(99, 5) })?.id).toBe('e301'));
+  test('начатая 150-я важнее просмотренных до неё', () =>
+    expect(pickEpisode(long, null, { e149: pr(99, 1), e150: pr(30, 2) })?.id).toBe('e150'));
+  test('серии пропали из списка, а прогресс остался — не падаем', () => expect(pickEpisode([], null, { e5: pr(30, 1) })).toBeUndefined());
+});

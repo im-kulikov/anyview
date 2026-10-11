@@ -73,7 +73,7 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player({ title, e
   const persist = useCallback((force = false, el: VideoEl | null = videoRef.current) => {
     const v = el;
     const id = loadedEp.current;
-    if (!v || !id || !v.duration || v.currentTime === 0) return;
+    if (!v || !id || !Number.isFinite(v.duration) || v.duration <= 0 || v.currentTime === 0) return; // Infinity (поток) в JSON стал бы null
     const now = Date.now();
     if (!force && now - lastSave.current < SAVE_MS) return;
     lastSave.current = now;
