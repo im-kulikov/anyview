@@ -1,15 +1,16 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Check, Cloud, CloudOff } from 'lucide-react';
 import { S } from '../../lib/strings';
+import { LibrarySection } from '../library/LibrarySection';
 import { useDocumentTitle } from '../../lib/useDocumentTitle';
 import { deleteCloudData, flag, getSyncState, renderSignIn, retry, signOut, start, subscribeSyncState } from '../../sync/engine';
 import styles from './SyncPage.module.css';
 
 const time = (t: number) => new Date(t).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
 
-/** Экран `/sync` (SPEC §5.8). Код провайдера (Firebase, Google) грузится только после «Включить синхронизацию» или при уже выполненном входе. */
+/** Экран `/sync` — «Аккаунт» (SPEC §5.8): сверху «Моё», ниже синхронизация. Код провайдера (Firebase, Google) грузится только после «Включить синхронизацию» или при уже выполненном входе. */
 export function SyncPage() {
-  useDocumentTitle(S.sync.title);
+  useDocumentTitle(S.sync.accountTitle);
   const st = useSyncExternalStore(subscribeSyncState, getSyncState);
   const [wantButton, setWantButton] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -26,10 +27,13 @@ export function SyncPage() {
   return (
     <main className={styles.main}>
       <div className={styles.content}>
+        <h1 className={styles.account}>{S.sync.accountTitle}</h1>
+        <LibrarySection />
+        <div className={styles.syncBlock}>
         <div className={styles.icon} aria-hidden="true">
           {st.available ? <Cloud size={32} /> : <CloudOff size={32} />}
         </div>
-        <h1>{st.available ? S.sync.title : S.sync.unavailable}</h1>
+        <h2 className={styles.syncTitle}>{st.available ? S.sync.title : S.sync.unavailable}</h2>
         <p className={styles.lead}>{st.available ? S.sync.lead : S.sync.unavailableBody}</p>
 
         {st.available && (
@@ -120,6 +124,7 @@ export function SyncPage() {
             </section>
           </>
         )}
+        </div>
       </div>
     </main>
   );

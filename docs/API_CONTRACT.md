@@ -203,6 +203,12 @@ export interface TitleDetails {
   providers: string[];          // откуда сведения: ['shikimori', 'anilist']
 }
 
+/** Принадлежность тайтла к франшизе: `key` одинаков у всех сезонов, `season` — номер сезона. Нет значения — тайтл сам по себе (фильм, OVA, спэшл). */
+export interface FranchiseRef {
+  key: string;
+  season: number;
+}
+
 /** Что умеет бэкенд: фронтенд рисует «скоро» по status, а не по хардкоду. */
 export interface CatalogInfo {
   types: { type: ContentType; label: string; status: 'available' | 'coming_soon' }[];
@@ -262,6 +268,8 @@ export interface ContentProvider {
   episodes(titleId: string, signal?: AbortSignal): Promise<Season[]>;
   sources(episodeId: string, signal?: AbortSignal): Promise<Source[]>;
   details(id: string, signal?: AbortSignal): Promise<TitleDetails>;
+  /** Локально и синхронно, по полям карточки (без сети): франшиза и номер сезона, чтобы группировать сезоны в избранном. */
+  franchiseOf(t: TitleSummary): FranchiseRef | undefined;
   related(id: string, signal?: AbortSignal): Promise<RelatedTitles>;
   search(p: { q: string; type?: ContentType; page: number; pageSize: number; signal?: AbortSignal }): Promise<Page<TitleSummary>>;
 }
@@ -372,6 +380,7 @@ export interface ContentProvider {
 | `Episode.preview` | `preview` | через `https()` |
 | `Episode.available` | — | `true` для серий из плейлиста; плюс синтетическая серия из `nextEpisode`: `id = av-{rawId}-next-{n}`, `available: false` |
 | `details(id)` | Shikimori `GET /animes?search=`, `GET /animes/{id}`; AniList `POST` GraphQL по `idMal` | поиск по оригинальному названию (часть после `/`) и год ±1; принимается только точное совпадение имени (`name`/`russian`/`english`/`synonyms`, нормализация как в `related`) — иначе пустой результат. Shikimori: жанры RU, рейтинг, студии, MAL id. AniList: `source` → RU, штат `Original Story/Creator` → автор, 6 главных героев с первым японским сейю. Сбой Shikimori → `ApiError` (не кэшируется), сбой AniList → поля AniList пропускаются. Совпало 101 из 120 (84 %), ложных нет (ADR-30, `docs/research/title-details.md`) |
+| `franchiseOf(t)` | — (локально) | `format` ТВ/ONA и нет маркера фильма/спэшла → `{key: normTitle(baseName(name)), season: маркер сезона ?? 1}`, иначе `undefined`. Нормализация и маркеры те же, что у `related`. У сервера метод читает идентификатор франшизы из своих данных (в карточке) |
 | `related(id)` | `POST /search` | **один** поиск на франшизу: запрос — «голова» названия (часть до первого `:`, ` - `, ` — `, `. `), если она ≥ 4 символов, иначе базовое название; результаты кэшируются по нормализованному запросу с TTL адаптера, одновременные вызовы делят промис. Нормализация: регистр, `ё`→`е`, пунктуация и литеральные `\` перед кавычками → пробел. Маркеры русского названия: `(второй сезон)`…`(двенадцатый)`, `(2 сезон)`, `(2-й сезон)` — сезон; `(фильм …)`, `(спецвыпуск N)`, `(спэшл N)`, `(cпэшлы)` (латинская `c`) — не сезон. Номер из оригинального названия **не используется**. Кандидаты: «голова» совпала или база начинается с «головы» + пробел (поиск идёт по подстроке — «Саки» найдёт «Осаки», такие отсекаются). **Сезоны** — кандидаты с той же базой, `format` ТВ/ONA, без маркеров фильма/спэшла; номер = маркер, без маркера 1; дубль номера (ремейки) уходит в «Похожие»; текущий тайтл включается с `current: true`, даже если поиск его не вернул. **Похожие** — остальные кандидаты без самого тайтла, по году и id, не более 40. «Ничего не найдено» (404 без CORS, правило §5.1) → пустой результат; сетевой сбой и не-200 → `ApiError` без повторов (чтобы «связей нет» не закэшировалось на час); интерфейс ошибку `related` молча игнорирует. Ограничения: франшизы с разными русскими названиями («Наруто»/«Боруто») не связываются, разрыв номеров возможен (Pokémon), связь с ремейком «(2021)» односторонняя. Правила проверены на 881 тайтле из 336 сохранённых поисков (ADR-29) |
 | `Source` (×2) | `std`, `hd` | `SD 480p` (`std`, `height: 480`) и `HD 720p` (`hd`, `height: 720`); `Source.id = {episodeId}-{height}`; `stream = {kind:'file', url: https(...), mime:'video/mp4'}`; `audio = [{lang:'ru', kind:'dub', studio:'AnimeVost'}]`; у `hd` пустой строки источника нет |
 

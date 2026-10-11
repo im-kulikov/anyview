@@ -8,7 +8,6 @@ import styles from './DesktopHeader.module.css';
 const ITEMS = [
   { to: '/', label: S.nav.home, end: true },
   { to: '/anime', label: S.nav.anime },
-  { to: '/library', label: S.nav.library },
   { to: '/series', label: S.nav.series, soon: true },
   { to: '/movies', label: S.nav.movies, soon: true },
 ];

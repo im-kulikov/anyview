@@ -12,6 +12,7 @@ export function plural(n: number, forms: [string, string, string]): string {
 export const formatNumber = (n: number) => RU_NUMBER.format(n);
 
 export const titlesWord = (n: number) => plural(n, ['тайтл', 'тайтла', 'тайтлов']);
+export const seasonsWord = (n: number) => plural(n, ['сезон', 'сезона', 'сезонов']);
 export const votesWord = (n: number) => plural(n, ['голос', 'голоса', 'голосов']);
 export const episodesWord = (n: number) => plural(n, ['серия', 'серии', 'серий']);
 

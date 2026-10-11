@@ -1,6 +1,8 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router';
 import { ChevronRight, Film } from 'lucide-react';
 import { useUpdates } from '../../api/hooks';
+import { provider } from '../../api/index';
 import { Rail } from '../../components/Rail';
 import { SectionHeader } from '../../components/SectionHeader';
 import { TitleCard, TitleCardSkeleton } from '../../components/TitleCard';
@@ -9,6 +11,8 @@ import { useNewEpisodes } from '../library/useNewEpisodes';
 import { favoritesStore, historyStore, statusesStore, useStore } from '../../lib/storage';
 import { PosterGrid } from '../../components/PosterGrid';
 import { ErrorState } from '../../components/ErrorState';
+import { seasonsWord } from '../../lib/format';
+import { groupSeasons } from '../../lib/library';
 import { S } from '../../lib/strings';
 import { useDocumentTitle } from '../../lib/useDocumentTitle';
 import styles from './HomePage.module.css';
@@ -20,6 +24,7 @@ export function HomePage() {
   useDocumentTitle();
   const q = useUpdates();
   const favorites = useStore(favoritesStore);
+  const favGroups = useMemo(() => groupSeasons(favorites, provider.franchiseOf), [favorites]);
   const hasStatuses = Object.values(useStore(statusesStore)).some((e) => e.s);
   const newEps = useNewEpisodes();
   // записи с новой серией — первыми
@@ -71,7 +76,7 @@ export function HomePage() {
         <section className={styles.section}>
           <SectionHeader title={S.home.favorites} />
           <Rail>
-            {favorites.map((t) => <TitleCard key={t.id} title={t} className={styles.railCard} />)}
+            {favGroups.map((g) => <TitleCard key={g.title.id} title={g.title} badge={g.seasons > 1 ? `${g.seasons} ${seasonsWord(g.seasons)}` : undefined} className={styles.railCard} />)}
           </Rail>
         </section>
       )}

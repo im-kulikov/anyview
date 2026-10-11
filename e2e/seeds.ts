@@ -37,6 +37,17 @@ export const seeds: Record<string, Seed> = {
       [`av-${raw[4].id}`]: { s: null, at: NOW - 9 }, // «надгробие»: карточки быть не должно
     }),
   },
+  // сезоны одной франшизы в избранном + фильм: должны схлопнуться в «3 сезона» и фильм
+  seasonsFav: {
+    'anyview:schema': '2',
+    'anyview:v1:favorites': JSON.stringify([
+      { ...summary(raw[0]), id: 'av-1', name: 'Пощади меня, великий господин!' },
+      { ...summary(raw[0]), id: 'av-2', name: 'Пощади меня, великий господин! (второй сезон)' },
+      { ...summary(raw[0]), id: 'av-3', name: 'Пощади меня, великий господин! (третий сезон)' },
+      { ...summary(raw[1]), id: 'av-4', name: 'Другое аниме', format: 'movie' },
+    ]),
+    'anyview:v1:favoritesMeta': JSON.stringify({ 'av-1': { at: 1 }, 'av-2': { at: 2 }, 'av-3': { at: 3 }, 'av-4': { at: 4 } }),
+  },
   // данные до версионирования: нет ключа схемы, нет favoritesMeta
   legacyV1: {
     'anyview:v1:history': JSON.stringify(historyOf(3)),

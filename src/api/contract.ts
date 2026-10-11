@@ -140,6 +140,12 @@ export interface SeasonLink {
   current: boolean;             // это открытый сейчас тайтл
 }
 
+/** Принадлежность тайтла к франшизе: `key` одинаков у всех сезонов, `season` — номер сезона. Нет значения — тайтл сам по себе (фильм, OVA, спэшл). */
+export interface FranchiseRef {
+  key: string;
+  season: number;
+}
+
 /** Связи тайтла. Пустые списки — штатный ответ (связей нет или не удалось определить). */
 export interface RelatedTitles {
   seasons: SeasonLink[];        // по возрастанию номера; UI показывает блок при ≥ 2
