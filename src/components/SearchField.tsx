@@ -57,10 +57,15 @@ export function SearchField({ active }: { active: boolean }) {
     if (!isDesktop) return;
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
-      if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return;
-      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+      // Ctrl/⌘+K работает и из полей ввода (как в привычных сервисах); «/» — только вне полей.
+      const combo = e.key.toLowerCase() === 'k' && (e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey;
+      if (!combo) {
+        if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return;
+        if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+      }
       e.preventDefault();
       inputRef.current?.focus();
+      if (combo) inputRef.current?.select();
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
