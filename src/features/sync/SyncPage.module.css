@@ -8,24 +8,39 @@
   flex-direction: column;
   gap: 16px;
 }
-.icon {
-  color: var(--text-3);
-}
-.syncBlock {
-  max-width: 560px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
 .account {
   font-size: 28px;
   font-weight: 800;
   letter-spacing: -0.01em;
 }
-.syncTitle {
-  font-size: 22px;
-  font-weight: 800;
-  letter-spacing: -0.01em;
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin: -6px 0 0;
+  font-size: 14px;
+  color: var(--text-2);
+}
+.summary svg {
+  flex: none;
+  color: var(--accent-fg);
+}
+/* Разделитель между «Моё» и «Синхронизацией»; scroll-margin — чтобы заголовок не прятался под sticky-шапкой при прокрутке из строки статуса */
+.syncSection {
+  margin-top: 12px;
+  padding-top: var(--section-gap);
+  border-top: 1px solid var(--border-strong);
+  scroll-margin-top: 80px;
+}
+.syncBody {
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+#sync-h:focus {
+  outline: none;
 }
 .lead {
   font-size: 15px;
@@ -40,7 +55,7 @@
   border-radius: 14px;
   background: var(--surface-2);
 }
-.card h2 {
+.card h3 {
   font-size: 16px;
   font-weight: 700;
 }
@@ -67,6 +82,10 @@
   min-height: 1.4em;
   font-size: 14px;
   color: var(--text-2);
+}
+.status:empty {
+  min-height: 0;
+  margin-bottom: -12px; /* пустая live-область остаётся в дереве доступности, но не даёт зазора над кнопкой */
 }
 .error {
   margin: 0;

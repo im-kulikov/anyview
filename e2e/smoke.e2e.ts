@@ -83,6 +83,18 @@ test.describe('данные на экранах', () => {
     await expect(page.getByText('Брошенного пока нет.')).toBeVisible();
   });
 
+  test('«Аккаунт»: секции «Моё» и «Синхронизация» с иконками в заголовках, строка статуса, порядок и разметка', async ({ page }) => {
+    await open(page, seeds.empty, '/sync');
+    await expect(page.getByRole('heading', { level: 1, name: 'Аккаунт' })).toBeVisible();
+    await expect(page.locator('main h2')).toHaveText(['Моё', 'Синхронизация']); // порядок: сначала «Моё»
+    await expect(page.locator('main h2 svg[aria-hidden="true"]')).toHaveCount(2); // иконки декоративные
+    await expect(page.getByRole('region', { name: 'Моё' })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Синхронизация' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 3 })).toHaveCount(2); // «Что синхронизируется», «Приватность»
+    await expect(page.getByText('Синхронизация выключена')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Включить', exact: true })).toBeVisible();
+  });
+
   test('старая ссылка /library ведёт на «Аккаунт» с той же вкладкой', async ({ page }) => {
     await open(page, seeds.full, '/library?tab=favorites');
     await expect(page).toHaveURL(/\/anyview\/sync\?tab=favorites$/);

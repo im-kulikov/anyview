@@ -1,0 +1,17 @@
+.title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.icon {
+  flex: none;
+  color: var(--accent-fg);
+}
+@media (min-width: 1024px) {
+  .title {
+    font-size: 26px;
+  }
+}
