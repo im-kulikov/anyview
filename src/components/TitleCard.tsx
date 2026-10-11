@@ -17,11 +17,13 @@ interface Props {
   showEpisode?: boolean;
   priority?: boolean;
   showOriginal?: boolean;
+  /** Произвольный бейдж на обложке (например, «3 сезона»); занимает место бейджа серии. */
+  badge?: string;
   className?: string;
   onOpen?: () => void;
 }
 
-export function TitleCard({ title: t, showEpisode, priority, showOriginal, className = '', onOpen }: Props) {
+export function TitleCard({ title: t, showEpisode, priority, showOriginal, badge, className = '', onOpen }: Props) {
   const qc = useQueryClient();
   const meta = cardMeta(t);
   // Префетч только на десктопе по наведению (SPEC §5.3): тайтл берётся из кэша адаптера.
@@ -44,6 +46,7 @@ export function TitleCard({ title: t, showEpisode, priority, showOriginal, class
     showOriginal && t.originalName,
     meta,
     showEpisode && t.latestEpisode && S.card.episode(t.latestEpisode.number),
+    badge,
     t.rating && `${S.card.rating} ${ratingText(t.rating.value)}`,
   ]
     .filter(Boolean)
@@ -51,7 +54,7 @@ export function TitleCard({ title: t, showEpisode, priority, showOriginal, class
   return (
     <Link to={`/title/${t.id}`} aria-label={label} className={`${styles.card} ${className}`} onMouseEnter={prefetch} onMouseLeave={() => window.clearTimeout(hover.current)} onClick={onOpen}>
       <Cover src={t.poster?.url} name={t.name} priority={priority} className={styles.cover}>
-        {showEpisode && t.latestEpisode && <span className={styles.badge}>{S.card.episode(t.latestEpisode.number)}</span>}
+        {badge ? <span className={styles.badge}>{badge}</span> : showEpisode && t.latestEpisode && <span className={styles.badge}>{S.card.episode(t.latestEpisode.number)}</span>}
         {t.rating && <RatingPill value={t.rating.value} />}
       </Cover>
       <span className={styles.text}>

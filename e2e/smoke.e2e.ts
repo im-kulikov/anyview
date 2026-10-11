@@ -7,14 +7,14 @@ import { seeds } from './seeds';
  * в консоли ни одной ошибки страницы. Это ровно та проверка, которой не было в релизе, сломавшем главную (ADR-32).
  */
 const ROUTES = [
-  '/', '/anime', '/library', '/library?tab=watching', '/library?tab=favorites',
+  '/', '/anime', '/library', '/sync?tab=watching', '/sync?tab=favorites',
   '/search?q=%D1%82%D0%BE%D0%BA%D0%B8%D0%B9', '/title/av-4000', '/sync', '/diagnostics', '/series', '/movies', '/no-such-route',
 ];
 const VIEWPORTS = { phone: { width: 390, height: 844 }, desktop: { width: 1440, height: 900 } };
 /** Все маршруты — на пустых и полных данных; остальные наборы — на маршрутах, которые читают локальные данные. */
 const FULL_MATRIX = ['empty', 'full'] as const;
-const DATA_SEEDS = ['history2', 'history50', 'legacyV1', 'corrupt', 'futureSchema', 'wrongFields', 'staleFeed'] as const;
-const DATA_ROUTES = ['/', '/anime', '/library', '/title/av-4000', '/sync'];
+const DATA_SEEDS = ['history2', 'history50', 'legacyV1', 'corrupt', 'futureSchema', 'wrongFields', 'staleFeed', 'seasonsFav'] as const;
+const DATA_ROUTES = ['/', '/anime', '/sync?tab=favorites', '/title/av-4000'];
 const ERROR_TEXT = 'Что-то пошло не так';
 
 async function open(page: Page, seed: Record<string, string>, path: string) {
@@ -70,19 +70,39 @@ test.describe('данные на экранах', () => {
     await expect(page.getByRole('heading', { name: 'Продолжить просмотр' })).toHaveCount(0);
   });
 
-  test('«Моё»: вкладки показывают свои записи, «надгробие» карточки не даёт', async ({ page }) => {
-    await open(page, seeds.full, '/library?tab=watching');
-    await expect(page.locator('main a[href^="/anyview/title/"]:visible')).toHaveCount(1);
-    await page.goto('/anyview/library?tab=done');
-    await expect(page.locator('main a[href^="/anyview/title/"]:visible')).toHaveCount(1);
-    await page.goto('/anyview/library?tab=favorites');
-    await expect(page.locator('main a[href^="/anyview/title/"]:visible')).toHaveCount(2);
-    await page.goto('/anyview/library?tab=dropped');
+  test('«Аккаунт»: вкладки «Моё» показывают свои записи, «надгробие» карточки не даёт', async ({ page }) => {
+    await open(page, seeds.full, '/sync?tab=watching');
+    const cards = page.locator('main a[href^="/anyview/title/"]:visible');
+    await expect(page.getByRole('heading', { name: 'Аккаунт', level: 1 })).toBeVisible();
+    await expect(cards).toHaveCount(1);
+    await page.goto('/anyview/sync?tab=done');
+    await expect(cards).toHaveCount(1);
+    await page.goto('/anyview/sync?tab=favorites');
+    await expect(cards).toHaveCount(2);
+    await page.goto('/anyview/sync?tab=dropped');
     await expect(page.getByText('Брошенного пока нет.')).toBeVisible();
   });
 
+  test('старая ссылка /library ведёт на «Аккаунт» с той же вкладкой', async ({ page }) => {
+    await open(page, seeds.full, '/library?tab=favorites');
+    await expect(page).toHaveURL(/\/anyview\/sync\?tab=favorites$/);
+    await expect(page.getByRole('heading', { name: 'Аккаунт', level: 1 })).toBeVisible();
+  });
+
+  test('избранное: сезоны одной франшизы — одна карточка «3 сезона» с последним сезоном; фильм отдельно', async ({ page }) => {
+    await open(page, seeds.seasonsFav, '/sync?tab=favorites');
+    const cards = page.locator('main a[href^="/anyview/title/"]:visible');
+    await expect(cards).toHaveCount(2);
+    await expect(page.getByText('3 сезона')).toBeVisible();
+    await expect(page.locator('a[href="/anyview/title/av-3"]:visible')).toHaveCount(1); // открывается последний сезон
+    await expect(page.locator('a[href="/anyview/title/av-1"]')).toHaveCount(0);
+    await expect(page.getByText('Сезоны одного тайтла показаны одной карточкой')).toBeVisible();
+    // счётчик вкладки — по показанным карточкам
+    await expect(page.getByRole('link', { name: /Избранное\s*2/ })).toBeVisible();
+  });
+
   test('битое хранилище: данные не показываются, приложение работает', async ({ page }) => {
-    await open(page, seeds.corrupt, '/library');
+    await open(page, seeds.corrupt, '/sync');
     await expect(page.getByRole('heading', { name: 'Моё' })).toBeVisible();
     await expect(page.getByText('Здесь появятся начатые серии.')).toBeVisible();
   });

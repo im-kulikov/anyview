@@ -1,5 +1,5 @@
 import type {
-  CatalogInfo, ContentType, Page, RelatedTitles, Season, Source, Title, TitleDetails, TitleSummary,
+  CatalogInfo, ContentType, FranchiseRef, Page, RelatedTitles, Season, Source, Title, TitleDetails, TitleSummary,
 } from './contract';
 
 export interface ContentProvider {
@@ -9,6 +9,8 @@ export interface ContentProvider {
   episodes(titleId: string, signal?: AbortSignal): Promise<Season[]>;
   sources(episodeId: string, signal?: AbortSignal): Promise<Source[]>;
   details(id: string, signal?: AbortSignal): Promise<TitleDetails>;
+  /** Локально и синхронно, по полям карточки: к какой франшизе и какому сезону относится тайтл (без сети; у сервера — по его данным). */
+  franchiseOf(t: TitleSummary): FranchiseRef | undefined;
   related(id: string, signal?: AbortSignal): Promise<RelatedTitles>;
   search(p: { q: string; type?: ContentType; page: number; pageSize: number; signal?: AbortSignal }): Promise<Page<TitleSummary>>;
 }

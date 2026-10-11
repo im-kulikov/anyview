@@ -1,4 +1,4 @@
-import type { RelatedTitles, SeasonLink, TitleSummary } from '../../contract';
+import type { FranchiseRef, RelatedTitles, SeasonLink, TitleSummary } from '../../contract';
 
 /**
  * Связи тайтлов из одного поиска API (сервера у нас нет — правила эвристические, ADR-29).
@@ -84,4 +84,15 @@ export function classifyRelated(current: TitleSummary, results: TitleSummary[]):
     else seasons.push({ id: t.id, number: n, label: `${n} сезон`, ...(t.year && { year: t.year }), current: t.id === current.id });
   }
   return { seasons, similar: similar.filter((x) => x.id !== current.id).sort(byYearId).slice(0, MAX_SIMILAR) };
+}
+
+/**
+ * Франшиза по карточке, без сети: ключ — нормализованная база названия (без маркеров сезона), сезон — по русскому маркеру
+ * (без маркера 1). Только ТВ/ONA и без маркеров фильма/спэшла — как «Сезоны» в `classifyRelated`; остальное само по себе.
+ * Те же ограничения: франшизы с разными русскими названиями не склеиваются.
+ */
+export function franchiseOf(t: Pick<TitleSummary, 'name' | 'format'>): FranchiseRef | undefined {
+  if ((t.format !== 'tv' && t.format !== 'ona') || hasKindMarker(t.name)) return undefined;
+  const key = normTitle(baseName(t.name));
+  return key ? { key, season: seasonMarker(t.name) ?? 1 } : undefined;
 }
