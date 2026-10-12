@@ -11,11 +11,20 @@ interface Props {
   children?: ReactNode;
 }
 
+/** Уже показанные обложки: при возврате на экран карточка монтируется заново, и без этого каждая снова проходила бы «буква → ожидание IntersectionObserver → fade-in». */
+const seen = new Set<string>();
+const MAX_SEEN = 500;
+const remember = (src: string): void => {
+  seen.delete(src);
+  seen.add(src);
+  if (seen.size > MAX_SEEN) seen.delete(seen.values().next().value!);
+};
+
 export function Cover({ src, name, ratio = '2 / 3', priority, className = '', children }: Props) {
-  const [loaded, setLoaded] = useState(false);
+  const [loaded, setLoaded] = useState(() => !!src && seen.has(src));
   const [failed, setFailed] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
-  const [near, setNear] = useState(!!priority);
+  const [near, setNear] = useState(() => !!priority || (!!src && seen.has(src)));
 
   // Картинки вне экрана не качаем (нативный lazy берёт ~1250 px запаса и забивает канал, пока грузится первая обложка).
   useEffect(() => {
@@ -28,7 +37,10 @@ export function Cover({ src, name, ratio = '2 / 3', priority, className = '', ch
 
   // Стабильный ref: иначе React вызывает его дважды на каждый рендер каждой карточки.
   const imgRef = useCallback((el: HTMLImageElement | null) => {
-    if (el?.complete && el.naturalWidth > 0) setLoaded(true);
+    if (el?.complete && el.naturalWidth > 0) {
+      remember(el.getAttribute('src') ?? '');
+      setLoaded(true);
+    }
   }, []);
 
   const showImg = src && !failed && near;
@@ -43,7 +55,7 @@ export function Cover({ src, name, ratio = '2 / 3', priority, className = '', ch
           loading={priority ? 'eager' : 'lazy'}
           fetchPriority={priority ? 'high' : 'low'}
           decoding="async"
-          onLoad={() => setLoaded(true)}
+          onLoad={() => { remember(src); setLoaded(true); }}
           onError={() => setFailed(true)}
         />
       ) : src && !failed ? null : (
