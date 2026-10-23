@@ -60,7 +60,7 @@ test('parseLocalData: чужие формы и неверные типы не б
   expect(parseLocalData(null)).toBeNull();
   expect(parseLocalData([])).toBeNull();
   const d = parseLocalData({ progress: { e: { titleId: 't', position: '1', duration: 5, updatedAt: 1 } }, history: 'x', favorites: [5, null], favMeta: [], statuses: { x: { s: 'bogus', at: 1 } } });
-  expect(d).toEqual({ progress: {}, history: [], favorites: [], favMeta: {}, statuses: {} });
+  expect(d).toEqual({ progress: {}, history: [], historyGone: {}, favorites: [], favMeta: {}, statuses: {} });
 });
 
 test('resetLocalData: убирает данные приложения, ключ схемы и флаг синхронизации остаются', () => {
