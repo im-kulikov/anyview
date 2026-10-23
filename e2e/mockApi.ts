@@ -7,7 +7,7 @@ import last from './fixtures/last.json' with { type: 'json' };
  */
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
 const ANIME_HOSTS = ['api.animetop.info', 'api.animevost.org'];
-const IMAGE_HOSTS = ['static.openni.ru', 'media.test'];
+const IMAGE_HOSTS = ['wsrv.nl', 'v14.vost.pw', 'animevost.org', 'static.openni.ru', 'media.test'];
 
 type Raw = { id: number; title: string };
 const baseItems = last.data as unknown as Raw[];
@@ -22,6 +22,8 @@ export interface MockOpts {
   feed?: 'http500' | 'abort' | 'empty';
   /** Дополнительные (враждебные) элементы ленты и поиска — для фаззинга. */
   extraItems?: unknown[];
+  /** Ответ на запрос картинки: 'ok' (по умолчанию), статус ошибки или 'hang' — соединение молчит. */
+  images?: (url: URL) => 'ok' | 404 | 500 | 'hang';
 }
 
 export async function mockApi(page: Page, opts: MockOpts = {}): Promise<Net> {
@@ -31,7 +33,12 @@ export async function mockApi(page: Page, opts: MockOpts = {}): Promise<Net> {
     // свой preview или (пост-деплой проверка) живой сайт из E2E_BASE_URL — пропускаем; всё остальное подменено
     if (url.hostname === '127.0.0.1' || url.origin === process.env.E2E_BASE_URL) return route.continue();
     if (ANIME_HOSTS.includes(url.hostname)) return animevost(route, url, opts);
-    if (IMAGE_HOSTS.includes(url.hostname)) return route.fulfill({ status: 200, contentType: 'image/png', body: PNG });
+    if (IMAGE_HOSTS.includes(url.hostname)) {
+      const r = opts.images?.(url) ?? 'ok';
+      if (r === 'hang') return; // запрос остаётся без ответа (route не завершаем)
+      if (r !== 'ok') return route.fulfill({ status: r, body: '' });
+      return route.fulfill({ status: 200, contentType: 'image/png', body: PNG });
+    }
     if (['shikimori.io', 'graphql.anilist.co'].includes(url.hostname)) return route.abort('failed');
     net.unexpected.push(`${route.request().method()} ${url.origin}${url.pathname}`);
     return route.fulfill({ status: 500, body: 'unexpected request in e2e' });

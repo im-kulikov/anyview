@@ -8,6 +8,7 @@ const hrefs = (env: Parameters<typeof headHints>[0]) => headHints(env).map((t) =
 test('подсказки строятся из VITE_ANIMEVOST_BASES и FEED_PAGE_SIZE', () => {
   expect(hrefs({ VITE_ANIMEVOST_BASES: ' https://a.test/v1/ , https://b.test/v1' })).toEqual([
     'preconnect https://a.test',
+    'preconnect https://wsrv.nl',
     'preconnect https://static.openni.ru',
     `preload https://a.test/v1${lastPath(1, FEED_PAGE_SIZE)}`,
   ]);

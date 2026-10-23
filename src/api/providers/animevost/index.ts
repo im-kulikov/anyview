@@ -6,7 +6,7 @@ import type { ContentProvider } from '../../provider';
 import { https } from '../../../lib/https';
 import { report } from '../../../lib/report';
 import { createClient, form } from './client';
-import { lastPath, MAX_PAGE } from './urls';
+import { imageUrls, lastPath, MAX_PAGE } from './urls';
 import { ANILIST, ANILIST_QUERY, pickShikimori, SHIKIMORI, toDetails, type AniListMedia, type ShikiAnime, type ShikiListItem } from './details';
 import { REQUEST_TIMEOUT_MS } from './client';
 import { classifyRelated, franchiseOf, normTitle, relatedQuery } from './related';
@@ -199,6 +199,7 @@ export function createAnimevostProvider(bases: string[]): ContentProvider {
 
   const self: ContentProvider = {
     franchiseOf,
+    imageUrls,
     async catalog(): Promise<CatalogInfo> {
       return {
         types: [
