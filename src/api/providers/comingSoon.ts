@@ -18,6 +18,7 @@ export const comingSoonProvider: ContentProvider = {
   episodes: notFound,
   sources: notFound,
   franchiseOf: () => undefined,
+  imageUrls: (u) => [u],
   details: async () => ({ genres: [], studios: [], characters: [], providers: [] }),
   related: async () => ({ seasons: [], similar: [] }),
 };

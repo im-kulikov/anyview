@@ -12,6 +12,7 @@ export function headHints(env: Env): HtmlTagDescriptor[] {
   const link = (rel: string, attrs: Record<string, string | boolean>): HtmlTagDescriptor => ({ tag: 'link', attrs: { rel, ...attrs }, injectTo: 'head' });
   return [
     link('preconnect', { href: new URL(first).origin, crossorigin: true }),
+    link('preconnect', { href: 'https://wsrv.nl' }), // обложки идут через него (imageUrls); без crossorigin: <img> не использует CORS-соединение
     link('preconnect', { href: IMAGE_ORIGIN, crossorigin: true }),
     // тот же URL, что запрашивает адаптер для первой страницы (main.tsx → updatesQuery)
     link('preload', { as: 'fetch', href: first + lastPath(1, FEED_PAGE_SIZE), crossorigin: true }),

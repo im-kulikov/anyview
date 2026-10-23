@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { provider } from '../../api/index';
 import type { Episode, Title } from '../../api/contract';
 
 interface Opts {
@@ -15,7 +16,7 @@ interface Opts {
 export function useMediaSession({ title, episode, hasNext, onPlay, onPause, onNext, onPrev }: Opts) {
   useEffect(() => {
     if (!('mediaSession' in navigator)) return;
-    const artwork = title.poster ? [{ src: title.poster.url }] : [];
+    const artwork = title.poster ? [{ src: provider.imageUrls(title.poster.url)[0]! }] : [];
     navigator.mediaSession.metadata = new MediaMetadata({ title: title.name, artist: episode.name, album: 'anyview', artwork });
   }, [title, episode]);
 

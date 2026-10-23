@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
 import { Heart, Play, Share, Star } from 'lucide-react';
 import { ApiError, type Episode, type Source, type Title } from '../../api/contract';
+import { provider } from '../../api/index';
 import { useDetails, useEpisodes, useRelated, useTitle } from '../../api/hooks';
 import { Cover } from '../../components/Cover';
 import { ErrorState } from '../../components/ErrorState';
@@ -93,11 +94,13 @@ function TitleBody({ title, episodes, episodesPending }: { title: Title; episode
   // жанры animevost + жанры/темы из баз, без дублей (регистр не важен)
   const tags = [...new Map([...title.genres.map((g) => g.name), ...(details?.genres ?? [])].map((n) => [n.toLowerCase(), n])).values()];
 
+  const bgUrl = (title.backdrop ?? title.poster)?.url;
+
   return (
     <main className={styles.main}>
       <section className={styles.hero}>
         <div className={styles.bg} aria-hidden="true">
-          <img src={(title.backdrop ?? title.poster)?.url} alt="" />
+          <img src={bgUrl && provider.imageUrls(bgUrl)[0]} alt="" referrerPolicy="no-referrer" />
           <div />
         </div>
         <div className={styles.inner}>
