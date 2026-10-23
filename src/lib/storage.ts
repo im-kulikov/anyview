@@ -230,6 +230,10 @@ export const LIMITS = { progress: 500, history: 50, favorites: 200, recent: 8, t
 
 export const progressStore = createStore<Record<string, ProgressEntry>>('progress', {}, parseProgress);
 export const historyStore = createStore<HistoryEntry[]>('history', [], listOf(isHistory));
+/** «Убрано из истории»: id тайтла → момент удаления. Нужно слиянию: без метки запись вернулась бы с другого устройства (как `favMeta.del`). */
+const parseGone = (v: unknown): Record<string, number> | undefined =>
+  isObj(v) ? (Object.fromEntries(Object.entries(v).filter(([, at]) => isNum(at))) as Record<string, number>) : undefined;
+export const historyGoneStore = createStore<Record<string, number>>('historyGone', {}, parseGone);
 export const favoritesStore = createStore<TitleSummary[]>('favorites', [], listOf(isSummary));
 const isMeta = (x: unknown): x is FavMeta => isObj(x) && isNum(x.at) && (x.del === undefined || x.del === true);
 const parseMeta = (v: unknown): Record<string, FavMeta> | undefined =>
@@ -315,6 +319,21 @@ export function resetProgress(episodeId: string) {
   });
 }
 
+/** Не больше `LIMITS.tombstones` самых свежих меток. Чистая: используется и слиянием. */
+export function pruneGone(m: Record<string, number>): Record<string, number> {
+  const ids = Object.keys(m);
+  if (ids.length <= LIMITS.tombstones) return m;
+  return Object.fromEntries(ids.sort((a, b) => m[b] - m[a] || (a < b ? -1 : 1)).slice(0, LIMITS.tombstones).sort().map((id) => [id, m[id]]));
+}
+
+/** Убрать тайтл из «Продолжить просмотр» (и из «новых серий» по истории). Прогресс серий остаётся; новый просмотр вернёт запись. */
+export function removeFromHistory(titleId: string): void {
+  batch(() => {
+    historyStore.set(historyStore.get().filter((h) => h.title.id !== titleId));
+    historyGoneStore.set(pruneGone({ ...historyGoneStore.get(), [titleId]: Date.now() }));
+  });
+}
+
 export const isFavorite = (list: TitleSummary[], id: string) => list.some((t) => t.id === id);
 
 /** Живые метки — только для тайтлов из списка; «надгробий» не больше LIMITS.tombstones, самые свежие. Чистая: используется и слиянием. */
@@ -376,6 +395,7 @@ export function addRecentSearch(q: string) {
 export interface LocalData {
   progress: Record<string, ProgressEntry>;
   history: HistoryEntry[];
+  historyGone: Record<string, number>;
   favorites: TitleSummary[];
   favMeta: Record<string, FavMeta>;
   statuses: Record<string, StatusEntry>;
@@ -384,6 +404,7 @@ export interface LocalData {
 export const readLocal = (): LocalData => ({
   progress: progressStore.get(),
   history: historyStore.get(),
+  historyGone: historyGoneStore.get(),
   favorites: favoritesStore.get(),
   favMeta: favoritesMetaStore.get(),
   statuses: statusesStore.get(),
@@ -394,6 +415,7 @@ export function writeLocal(d: LocalData): void {
   batch(() => {
     progressStore.set(d.progress);
     historyStore.set(d.history);
+    historyGoneStore.set(d.historyGone);
     favoritesStore.set(d.favorites);
     favoritesMetaStore.set(d.favMeta);
     statusesStore.set(d.statuses);
@@ -401,7 +423,7 @@ export function writeLocal(d: LocalData): void {
 }
 
 export function subscribeLocal(cb: () => void): () => void {
-  const off = [progressStore, historyStore, favoritesStore, favoritesMetaStore, statusesStore].map((s) => s.subscribe(cb));
+  const off = [progressStore, historyStore, historyGoneStore, favoritesStore, favoritesMetaStore, statusesStore].map((s) => s.subscribe(cb));
   return () => off.forEach((f) => f());
 }
 
@@ -411,6 +433,7 @@ export function parseLocalData(v: unknown): LocalData | null {
   return {
     progress: parseProgress(v.progress) ?? {},
     history: listOf(isHistory)(v.history) ?? [],
+    historyGone: parseGone(v.historyGone) ?? {},
     favorites: listOf(isSummary)(v.favorites) ?? [],
     favMeta: parseMeta(v.favMeta) ?? {},
     statuses: parseStatuses(v.statuses) ?? {},

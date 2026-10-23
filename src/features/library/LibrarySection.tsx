@@ -1,12 +1,12 @@
 import { useMemo } from 'react';
-import { Library } from 'lucide-react';
+import { Library, X } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router';
 import type { TitleSummary } from '../../api/contract';
 import { provider } from '../../api/index';
 import { ContinueCard } from '../../components/ContinueCard';
 import { PosterGrid } from '../../components/PosterGrid';
 import { SectionTitle } from '../../components/SectionTitle';
-import { favoritesStore, historyStore, LIST_STATUSES, statusesStore, useStore, type ListStatus } from '../../lib/storage';
+import { favoritesStore, historyStore, LIST_STATUSES, removeFromHistory, statusesStore, useStore, type ListStatus } from '../../lib/storage';
 import { seasonsWord } from '../../lib/format';
 import { groupSeasons } from '../../lib/library';
 import { S } from '../../lib/strings';
@@ -57,7 +57,14 @@ export function LibrarySection() {
         </div>
       ) : tab === 'continue' ? (
         <ul className={styles.continue}>
-          {history.map((h) => <li key={h.title.id}><ContinueCard entry={h} isNew={fresh.has(h.title.id)} /></li>)}
+          {history.map((h) => (
+            <li key={h.title.id} className={styles.item}>
+              <ContinueCard entry={h} isNew={fresh.has(h.title.id)} />
+              <button type="button" className={styles.remove} aria-label={S.library.remove(h.title.name)} onClick={() => removeFromHistory(h.title.id)}>
+                <X size={18} aria-hidden="true" />
+              </button>
+            </li>
+          ))}
         </ul>
       ) : tab === 'favorites' ? (
         <>

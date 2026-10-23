@@ -1,4 +1,4 @@
-import { isWatched, LIMITS, pruneFavMeta, pruneStatuses, type FavMeta, type StatusEntry, type HistoryEntry, type LocalData, type ProgressEntry } from '../lib/storage';
+import { isWatched, LIMITS, pruneFavMeta, pruneGone, pruneStatuses, type FavMeta, type StatusEntry, type HistoryEntry, type LocalData, type ProgressEntry } from '../lib/storage';
 import type { TitleSummary } from '../api/contract';
 
 /**
@@ -7,7 +7,7 @@ import type { TitleSummary } from '../api/contract';
  * Равные метки времени разрешаются сравнением канонического JSON, а не порядком аргументов.
  */
 
-export const EMPTY: LocalData = { progress: {}, history: [], favorites: [], favMeta: {}, statuses: {} };
+export const EMPTY: LocalData = { progress: {}, history: [], historyGone: {}, favorites: [], favMeta: {}, statuses: {} };
 
 /** Правила Firestore требуют `data.size() < 200000`; берём запас и считаем в байтах UTF-8. */
 export const CLOUD_MAX_BYTES = 190_000;
@@ -33,17 +33,23 @@ function mergeProgress(a: LocalData['progress'], b: LocalData['progress']): Loca
 }
 
 /**
- * Одна запись на тайтл — самая свежая. Затем сверка с прогрессом: запись, которая старше досмотренной (≥ 90 %) позже серии того же тайтла,
+ * Одна запись на тайтл — самая свежая; запись не новее метки удаления (`historyGone`) отбрасывается. Затем сверка с прогрессом: запись, которая старше досмотренной (≥ 90 %) позже серии того же тайтла,
  * устарела — следующую серию или удаление уже решило то устройство, где досмотрели (при следующей серии там есть более свежая запись).
  * Без этого удалённая запись воскресала бы из старой копии, а слияние зависело бы от порядка.
  */
-function mergeHistory(a: HistoryEntry[], b: HistoryEntry[], progress: LocalData['progress']): HistoryEntry[] {
+function mergeGone(a: LocalData['historyGone'], b: LocalData['historyGone']): LocalData['historyGone'] {
+  const out: LocalData['historyGone'] = { ...a };
+  for (const [id, at] of Object.entries(b)) out[id] = Math.max(out[id] ?? 0, at);
+  return pruneGone(out);
+}
+
+function mergeHistory(a: HistoryEntry[], b: HistoryEntry[], progress: LocalData['progress'], gone: LocalData['historyGone']): HistoryEntry[] {
   const byTitle = new Map<string, HistoryEntry>();
   for (const e of [...a, ...b]) byTitle.set(e.title.id, byTitle.has(e.title.id) ? newer(byTitle.get(e.title.id)!, e) : e);
   const watchedAt = new Map<string, number>();
   for (const p of Object.values(progress)) if (isWatched(p)) watchedAt.set(p.titleId, Math.max(watchedAt.get(p.titleId) ?? 0, p.updatedAt));
   return [...byTitle.values()]
-    .filter((e) => (watchedAt.get(e.title.id) ?? 0) <= e.updatedAt)
+    .filter((e) => (watchedAt.get(e.title.id) ?? 0) <= e.updatedAt && (gone[e.title.id] ?? 0) < e.updatedAt) // удалённое пользователем не воскресает, пока его не посмотрят снова
     .sort((x, y) => y.updatedAt - x.updatedAt || cmp(x.title.id, y.title.id))
     .slice(0, LIMITS.history);
 }
@@ -97,7 +103,8 @@ function mergeStatuses(a: LocalData['statuses'], b: LocalData['statuses']): Loca
 
 export function mergeData(a: LocalData, b: LocalData): LocalData {
   const progress = mergeProgress(a.progress, b.progress);
-  return { progress, history: mergeHistory(a.history, b.history, progress), ...mergeFavorites(a, b), statuses: mergeStatuses(a.statuses, b.statuses) };
+  const historyGone = mergeGone(a.historyGone, b.historyGone);
+  return { progress, history: mergeHistory(a.history, b.history, progress, historyGone), historyGone, ...mergeFavorites(a, b), statuses: mergeStatuses(a.statuses, b.statuses) };
 }
 
 /** Приведение одного состояния к инвариантам (лимиты, одна запись на тайтл, правила досмотра). */
@@ -121,6 +128,7 @@ export function fitForCloud(d: LocalData, max = CLOUD_MAX_BYTES): LocalData {
       for (const e of cur.history) items.push({ t: e.updatedAt, k: 'h:' + e.title.id });
     } else {
       for (const [id, m] of Object.entries(cur.favMeta)) if (m.del) items.push({ t: m.at, k: 'm:' + id });
+      for (const [id, at] of Object.entries(cur.historyGone)) items.push({ t: at, k: 'g:' + id });
       for (const [id, e] of Object.entries(cur.statuses)) if (e.s === null) items.push({ t: e.at, k: 's:' + id });
       if (!items.length) for (const [id, e] of Object.entries(cur.statuses)) items.push({ t: e.at, k: 's:' + id });
       if (!items.length) for (const t of cur.favorites) items.push({ t: cur.favMeta[t.id]?.at ?? 0, k: 'f:' + t.id });
@@ -131,6 +139,7 @@ export function fitForCloud(d: LocalData, max = CLOUD_MAX_BYTES): LocalData {
     cur = {
       progress: Object.fromEntries(Object.entries(cur.progress).filter(([id]) => !gone.has('p:' + id))),
       history: cur.history.filter((e) => !gone.has('h:' + e.title.id)),
+      historyGone: Object.fromEntries(Object.entries(cur.historyGone).filter(([id]) => !gone.has('g:' + id))),
       favorites: cur.favorites.filter((t) => !gone.has('f:' + t.id)),
       favMeta: Object.fromEntries(Object.entries(cur.favMeta).filter(([id]) => !gone.has('m:' + id) && !gone.has('f:' + id))),
       statuses: Object.fromEntries(Object.entries(cur.statuses).filter(([id]) => !gone.has('s:' + id))),

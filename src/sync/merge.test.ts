@@ -61,6 +61,40 @@ describe('история', () => {
   });
 });
 
+describe('удаление из истории', () => {
+  test('удалённое на одном устройстве не воскресает с другого, в любом порядке слияния', () => {
+    const phone = data({ historyGone: { t: 200 } });
+    const pc = data({ history: [hist('t', 'e1', 40, 100), hist('u', 'x', 1, 50)] });
+    for (const m of [mergeData(phone, pc), mergeData(pc, phone)]) {
+      expect(m.history.map((h) => h.title.id)).toEqual(['u']);
+      expect(m.historyGone).toEqual({ t: 200 });
+    }
+  });
+
+  test('новый просмотр после удаления возвращает запись; метка при этом остаётся', () => {
+    const phone = data({ historyGone: { t: 200 } });
+    const again = data({ history: [hist('t', 'e2', 5, 300)] });
+    const m = mergeData(phone, again);
+    expect(m.history).toMatchObject([{ episodeId: 'e2' }]);
+    expect(m.historyGone).toEqual({ t: 200 });
+  });
+
+  test('меток не больше LIMITS.tombstones, свежие остаются; обрезка для облака тоже их режет', () => {
+    const historyGone = Object.fromEntries(Array.from({ length: 320 }, (_, i) => [`d${i}`, i + 1]));
+    const n = normalize(data({ historyGone }));
+    expect(Object.keys(n.historyGone)).toHaveLength(LIMITS.tombstones);
+    expect(n.historyGone.d0).toBeUndefined();
+    expect(n.historyGone.d319).toBeDefined();
+    const big = data({ historyGone: Object.fromEntries(Array.from({ length: 300 }, (_, i) => [`${'x'.repeat(600)}${i}`, i + 1])) });
+    expect(Object.keys(fitForCloud(big, 50_000).historyGone).length).toBeLessThan(300);
+  });
+
+  test('облако без поля historyGone (старый клиент): разбор даёт пустые метки', () => {
+    expect(parseLocalData({ progress: {}, history: [] })!.historyGone).toEqual({});
+    expect(parseLocalData({ historyGone: { a: 5, b: 'x', c: null } })!.historyGone).toEqual({ a: 5 });
+  });
+});
+
 describe('избранное', () => {
   const fav = (...ids: string[]) => ids.map((i) => title(i));
 
@@ -134,7 +168,9 @@ function randomState(r: () => number): LocalData {
     if (x < 0.4) statuses[`t${t}`] = { s: (['watching', 'done', 'planned'] as const)[pick(3)], at, t: title(`t${t}`, `n${pick(2)}`) };
     else if (x < 0.6) statuses[`t${t}`] = { s: null, at };
   }
-  return { progress, history, favorites, favMeta, statuses };
+  const historyGone: LocalData['historyGone'] = {};
+  for (let t = 0; t < 3; t++) if (r() < 0.3) historyGone[`t${t}`] = 1 + pick(6);
+  return { progress, history, historyGone, favorites, favMeta, statuses };
 }
 
 describe('свойства слияния', () => {
@@ -216,7 +252,7 @@ describe('совместимость со старым облаком', () => {
 describe('сериализация и размер', () => {
   test('сериализация канонична и переживает разбор', () => {
     const d = data({ progress: { e1: prog('t', 1, 2) }, favorites: [title('a')], favMeta: { a: { at: 3 } } });
-    const reordered = { statuses: d.statuses, favMeta: d.favMeta, favorites: d.favorites, history: d.history, progress: { e1: { updatedAt: 2, duration: 100, position: 1, titleId: 't' } } };
+    const reordered = { statuses: d.statuses, historyGone: d.historyGone, favMeta: d.favMeta, favorites: d.favorites, history: d.history, progress: { e1: { updatedAt: 2, duration: 100, position: 1, titleId: 't' } } };
     expect(serialize(d)).toBe(serialize(reordered));
     const back = parseLocalData(JSON.parse(serialize(d)));
     expect(back && sameData(back, d)).toBe(true);

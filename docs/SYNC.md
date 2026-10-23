@@ -20,6 +20,7 @@
 ```
 { v: 1, progress: {episodeId: {titleId, position, duration, updatedAt}},
   history: [{title: TitleSummary, episodeId, episodeName, still?, position, duration, updatedAt}],
+  historyGone: {titleId: удалено_в_мс},   // «убрано из Продолжить»: запись не новее метки при слиянии отбрасывается
   favorites: TitleSummary[], favMeta: {titleId: {at, del?}},
   statuses: {titleId: {s: 'watching'|'planned'|'done'|'hold'|'dropped'|null, at, t?: TitleSummary}} }
 ```
