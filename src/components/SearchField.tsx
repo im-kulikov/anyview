@@ -82,7 +82,7 @@ export function SearchField({ active }: { active: boolean }) {
           enterKeyHint="search"
           autoComplete="off"
           value={value}
-          placeholder={active ? S.search.placeholderFull : S.search.placeholder}
+          placeholder={active ? (isDesktop ? S.search.placeholderFull : S.search.placeholderShort) : S.search.placeholder}
           className={styles.input}
           // iOS: фокус и переход — синхронно в обработчике касания.
           onFocus={() => {

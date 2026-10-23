@@ -33,10 +33,9 @@
   overflow: hidden;
   background: var(--surface-5);
 }
-.still img {
-  width: 100%;
+.stillCover {
   height: 100%;
-  object-fit: cover;
+  border-radius: 0;
 }
 .stillEmpty {
   background: var(--surface-2);

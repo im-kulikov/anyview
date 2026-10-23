@@ -159,3 +159,23 @@ test.describe('волна 2', () => {
     await expect(page).toHaveURL(/\/anyview\/sync$/);
   });
 });
+
+test.describe('поле поиска', () => {
+  test.use(PHONE);
+  const field = (page: import('@playwright/test').Page) => page.locator('input[type="search"]').locator('xpath=ancestor::div[contains(@class,"field")][1]');
+
+  test('на телефоне в режиме поиска одно кольцо фокуса (без белой обводки поверх акцентного) и плейсхолдер помещается', async ({ page }) => {
+    await seeded(page, seeds.empty, '/search');
+    await page.locator('input[type="search"]').focus();
+    expect(await field(page).evaluate((e) => getComputedStyle(e).outlineStyle)).toBe('none');
+    expect(await field(page).evaluate((e) => getComputedStyle(e).boxShadow)).not.toBe('none'); // акцентное кольцо на месте
+    await expect(page.locator('input[type="search"]')).toHaveAttribute('placeholder', 'Название или оригинал');
+  });
+
+  test('на десктопе вне режима поиска белая обводка фокуса сохраняется', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await seeded(page, seeds.empty, '/');
+    await page.locator('input[type="search"]').focus();
+    expect(await field(page).evaluate((e) => getComputedStyle(e).outlineStyle)).toBe('solid');
+  });
+});
