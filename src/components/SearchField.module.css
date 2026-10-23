@@ -19,11 +19,12 @@
   gap: 10px;
   padding-left: 16px;
 }
-/* Фокус — белая обводка, как везде (SPEC §9); акцентное кольцо остаётся признаком режима поиска (.active). */
-.field:focus-within {
+/* Фокус — белая обводка, как везде (SPEC §9); в режиме поиска (.active) его заменяет акцентное кольцо. */
+.field:focus-within:not(.active) {
   outline: 2px solid #fff;
   outline-offset: 2px;
 }
+/* В режиме поиска фокус виден по акцентному кольцу: второе (белое) поверх него давало на iPhone двойную рамку со свечением. */
 .active {
   box-shadow: inset 0 0 0 2px var(--accent);
 }

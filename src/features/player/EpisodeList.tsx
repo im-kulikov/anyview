@@ -1,6 +1,7 @@
 import { memo, useEffect, useRef, useState } from 'react';
 import { AudioLines, Check, Clock } from 'lucide-react';
 import type { Episode, Title } from '../../api/contract';
+import { Cover } from '../../components/Cover';
 import { S } from '../../lib/strings';
 import { formatDay } from '../../lib/format';
 import { isWatched, progressStore, useStore } from '../../lib/storage';
@@ -71,7 +72,7 @@ export const EpisodeList = memo(function EpisodeList({ title, episodes, currentI
           <li key={ep.id}>
             <button type="button" className={`${styles.row} ${cur ? styles.cur : ''}`} aria-current={cur ? 'true' : undefined} onClick={() => onPick(ep)}>
               <span className={styles.still}>
-                {ep.preview && <img src={ep.preview.url} alt="" loading="lazy" decoding="async" />}
+                {ep.preview && <Cover src={ep.preview.url} name={ep.name} ratio="16 / 9" className={styles.stillCover} />}
                 {cur && <span className={styles.playing} title={S.player.playing}><AudioLines size={22} aria-hidden="true" /></span>}
                 {pct > 0 && <span className={styles.prog}><span style={{ width: `${pct}%` }} /></span>}
               </span>

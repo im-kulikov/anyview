@@ -294,7 +294,7 @@ export const Player = forwardRef<PlayerHandle, Props>(function Player({ title, e
           playsInline
           x-webkit-airplay="allow"
           preload="none"
-          poster={current.preview?.url}
+          poster={current.preview && provider.imageUrls(current.preview.url)[0]} // у <video> запасных адресов нет: берём основной
           onClick={() => {
             // На тач-экране первое касание показывает контролы, второе — пауза.
             if (pointerType.current === 'touch' && controlsHidden) bump();
